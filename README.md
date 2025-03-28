@@ -1,4 +1,4 @@
-# Histr
+# Zhist
 
 This project is a lightweight and vim-like tui application designed 
 to manage and navigate command history for common shells like bash, zsh and fish.

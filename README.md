@@ -5,7 +5,7 @@ to manage and navigate command history for common shells like bash, zsh and fish
 
 Built using [libvaxis](https://github.com/rockorager/libvaxis) modern tui library.
 
-## Shells supported
+## Supported shells
 
 - [] bash
 - [] zsh
@@ -13,7 +13,7 @@ Built using [libvaxis](https://github.com/rockorager/libvaxis) modern tui librar
 
 ## Basic features
 
-- [] history listing 
+- [] history listing
 - [] history navigation with vim-keys
 - [] press enter to select command
 - [] press '/' to match some text against history commands

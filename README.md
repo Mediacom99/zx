@@ -7,7 +7,7 @@ Built using [libvaxis](https://github.com/rockorager/libvaxis) modern tui librar
 
 ## Supported shells
 
-- [] bash
+- [X] bash
     - history is read from bash history file and refreshed using `history` command.
       Another option is to use libreadline.
 - [] zsh

@@ -7,22 +7,22 @@ Built using [libvaxis](https://github.com/rockorager/libvaxis) modern tui librar
 
 ## Shells supported
 
-[] bash
-[] zsh
-[] fish
+- [] bash
+- [] zsh
+- [] fish
 
 ## Basic features
 
-[] history listing
-[] history navigation with vim-keys
-[] press enter to select command
-[] press '/' to match some text against history commands
-[] press 'e' to edit the command currently selected
-[] select multiple commands and chain them or pipe stuff between them
-[] create, save, list and use custom scripts
+- [] history listing 
+- [] history navigation with vim-keys
+- [] press enter to select command
+- [] press '/' to match some text against history commands
+- [] press 'e' to edit the command currently selected
+- [] select multiple commands and chain them or pipe stuff between them
+- [] create, save, list and use custom scripts
 
 ## Advanced features
 
-[] store history on db (local and cloud (?))
-[] sync between devices
-[] Ai assistant integration
+- [] store history on db (local and cloud (?))
+- [] sync between devices
+- [] Ai assistant integration

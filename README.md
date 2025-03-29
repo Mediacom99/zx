@@ -5,19 +5,6 @@ to manage and navigate command history for common shells like bash, zsh and fish
 
 Built using [libvaxis](https://github.com/rockorager/libvaxis) modern tui library.
 
-## App architecture
-Programming architecture: HistoryService - UiService - Controller
-
-HistoryService: history data structure, loading, parsing (data management) (use comptime for different shells ?)
-
-Controller: handles application logic, only struct that can access HistoryService (app logic).
-            Controller should be independent of the underlying shell used.
-
-UiService: libvaxis wrapper (UI rendering)
-
-App: holds instance of controller and uiService so that they can communicate together
-    (component coordination)
-
 ## Supported shells
 
 - [X] bash

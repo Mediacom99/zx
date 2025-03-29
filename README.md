@@ -27,24 +27,19 @@ App: holds instance of controller and uiService so that they can communicate tog
 - [ ] zsh
 - [ ] fish
 
-## Core features
-- [ ] read and parse bash history file
+## Next steps
+- [ ] read and parse bash history file into data structure
+- [ ] add some configuration options
+- [ ] better logging ?
 - [ ] display history entries in scrollable list
 - [ ] history navigation with vim-keys
 - [ ] searching/filtering
 - [ ] copy to clipboard / execute selected command
-- [ ] configuration options
-
-## Basic features
-
-- [ ] press enter to select command
-- [ ] press '/' to match some text against history commands
-- [ ] press 'e' to edit the command currently selected
 - [ ] select multiple commands and chain them or pipe stuff between them
-- [ ] create, save, list and use custom scripts
 
 ## Advanced features
 
+- [ ] create, save, list and use custom scripts
 - [ ] store history on db (local and cloud (?))
 - [ ] sync between devices
 - [ ] Ai assistant integration

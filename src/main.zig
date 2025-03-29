@@ -1,10 +1,14 @@
 const std = @import("std");
-const HistoryService = @import("HistoryService.zig");
-const Ctrl = @import("Controller.zig");
+const History = @import("History.zig");
 
 pub fn main() !void {
-    const ctrl = Ctrl.init();
-    ctrl.printMsg();
-    try ctrl.doSmth();
-    return;
+    var gpa = std.heap.DebugAllocator(.{}).init;
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+
+    var history = History.init(allocator, "/home/mediacom/.bash_history");
+    // var history = History.init(allocator, "/home/mediacom/development/zhist/prova");
+    defer history.deinit();
+
+    return history.loadAndParseHistoryFile();
 }

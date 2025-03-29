@@ -29,4 +29,4 @@ Built using [libvaxis](https://github.com/rockorager/libvaxis) modern tui librar
 - [ ] create, save, list and use custom scripts
 - [ ] store history on db (local and cloud (?))
 - [ ] sync between devices
-- [ ] Ai assistant integration
+- [ ] AI assistant integration

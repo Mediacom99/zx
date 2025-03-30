@@ -66,17 +66,17 @@ fn parseHistoryFile(self: *Self, historyFilePath: []const u8) !void {
 
         //Find size of line without spaces
         const replSize = std.mem.replacementSize(u8, line, " ", "");
-        try key.ensureTotalCapacityPrecise(replSize);
         key.clearRetainingCapacity();
+        try key.ensureTotalCapacityPrecise(replSize);
 
         //remove spaces
         for (line) |c| {
             if (c != ' ') {
-                try key.append(c);
+                key.appendAssumeCapacity(c);
             }
         }
 
-        var new_cmd = Command{ .timestamp = "TODO" };
+        var new_cmd = Command{ .timestamp = "" }; //TODO add timestamp
 
         //if key already exists remove old one and reinsert it.
         if (self.hist.fetchOrderedRemove(key.items)) |kv| {

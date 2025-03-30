@@ -64,7 +64,7 @@ fn parseHistoryFile(self: *Self, historyFilePath: []const u8) !void {
 
         //Find size of line without spaces
         const replSize = std.mem.replacementSize(u8, line, " ", "");
-        try key.ensureTotalCapacity(replSize);
+        try key.resize(replSize);
 
         //remove spaces
         for (line) |c| {

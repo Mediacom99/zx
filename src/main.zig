@@ -14,24 +14,6 @@ pub fn main() !void {
     }
     const allocator = gpa.allocator();
 
-    const start = try std.time.Instant.now();
-
-    var history = History.init(allocator);
+    var history = try History.init(allocator, historyFilePath);
     defer history.deinit();
-
-    try history.parseHistoryFile(historyFilePath);
-
-    var it = history.hist.iterator();
-    while (it.next()) |e| {
-        if (e.value_ptr.copies > 50) {
-            std.debug.print("Cmd: {s}\n", .{e.value_ptr.command});
-            std.debug.print("Time: {s}\n", .{e.value_ptr.timestamp});
-            std.debug.print("Copies: {d}\n", .{e.value_ptr.copies});
-            std.debug.print("\n", .{});
-        }
-    }
-
-    const end = try std.time.Instant.now();
-    const elapsed: f32 = @floatFromInt(end.since(start));
-    std.log.info("Time elapsed: {d:.3}ms\n", .{elapsed / std.time.ns_per_ms});
 }

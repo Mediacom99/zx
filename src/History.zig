@@ -14,11 +14,13 @@ pub const Command = struct {
 };
 
 /// Initialize History Service with given history file
-pub fn init(alloc: std.mem.Allocator) Self {
-    return Self{
+pub fn init(alloc: std.mem.Allocator, historyFilePath: []const u8) !Self {
+    var newSelf = Self{
         .hist = CommandList.init(alloc),
         .alloc = alloc,
     };
+    try newSelf.parseHistoryFile(historyFilePath);
+    return newSelf;
 }
 
 /// Frees the array hash map and keys and values if necessary
@@ -33,7 +35,7 @@ pub fn deinit(self: *Self) void {
 }
 
 //parses bash history file. The file is always closed.
-pub fn parseHistoryFile(self: *Self, historyFilePath: []const u8) !void {
+fn parseHistoryFile(self: *Self, historyFilePath: []const u8) !void {
     var file = try std.fs.openFileAbsolute(historyFilePath, .{});
     defer file.close();
 

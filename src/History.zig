@@ -1,15 +1,17 @@
 //! History service handles loading history data from different shells.
-
 historyFilePath: []const u8,
 
 /// ArrayHashMap containing Command structs
 hist: CommandList,
 
+alloc: std.mem.Allocator,
+
 pub const Command = struct {
-    /// null terminated string that holds command with whitespaces
-    command: []const u8,
     /// timestamp or number
     timestamp: []const u8,
+    command: []const u8,
+    /// How many times the command appears in history after the first time
+    copies: usize,
 };
 
 /// Initialize History Service with given history file
@@ -17,12 +19,18 @@ pub fn init(alloc: std.mem.Allocator, historyFilePath: []const u8) Self {
     return Self{
         .historyFilePath = historyFilePath,
         .hist = CommandList.init(alloc),
+        .alloc = alloc,
     };
 }
 
 /// Frees the array hash map and keys and values if necessary
-pub fn deinit(self: *Self) void {
-    //K and V heap allocated must be manually freed here.
+pub fn deinit(self: *Self) !void {
+    //Free heap allocated values
+    var it = self.hist.iterator();
+    while (it.next()) |e| {
+        self.alloc.free(e.value_ptr.command);
+        self.alloc.free(e.key_ptr.*);
+    }
     self.hist.deinit();
 }
 
@@ -32,24 +40,47 @@ pub fn loadAndParseHistoryFile(self: *Self) !void {
         return err;
     };
     defer file.close();
-    var buf: [10 * 1024]u8 = undefined;
-    const bytes_read = file.readAll(&buf) catch |err| {
-        log.err("failed to read history file into buffer: {any}", .{err});
-        return err;
-    };
+
+    const end_pos = try file.getEndPos();
+    const buf = try self.alloc.alloc(u8, end_pos);
+    defer self.alloc.free(buf);
+
+    const bytes_read = try file.readAll(buf);
     log.info("history file: {s} loaded, bytes read: {d}", .{ self.historyFilePath, bytes_read });
     if (bytes_read <= 0) {
         return error.EmptyHistoryFile;
     }
 
+    // iterator over lines split by newline
     var iterator = std.mem.splitScalar(u8, buf[0 .. bytes_read - 1], '\n');
     while (iterator.next()) |line| {
         if (line.len == 0) continue;
-        log.info("{s}", .{line});
+        const cmd = try self.alloc.dupe(u8, line);
+        //Find size of line without spaces
+        const replSize = std.mem.replacementSize(u8, line, " ", "");
+        const key = try self.alloc.alloc(u8, replSize);
+        // trim spaces and put them in key
+        _ = std.mem.replace(u8, line, " ", "", key);
+        //if key does not already exist we need to update the value, otherwise
+        //we update the copies counter
+        const res = self.hist.getOrPut(key) catch |err| {
+            log.err("failed to put KV in CommandList: {any}", .{err});
+            self.alloc.free(key);
+            self.alloc.free(cmd);
+            continue;
+        };
+        if (res.found_existing == true) {
+            res.value_ptr.copies += 1;
+            self.alloc.free(key);
+            self.alloc.free(cmd);
+            continue;
+        }
+        res.value_ptr.command = cmd;
+        res.value_ptr.timestamp = "2006";
+        res.value_ptr.copies = 0;
     }
 }
 
-const Key = []const u8;
 const CommandList = std.array_hash_map.StringArrayHashMap(Command);
 const Self = @This();
 const std = @import("std");

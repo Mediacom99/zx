@@ -10,7 +10,7 @@ pub const Command = struct {
     timestamp: []const u8,
     command: []const u8,
     /// How many times the command appears in history after the first time
-    copies: usize,
+    reruns: usize,
 };
 
 /// Initialize History Service with given history file
@@ -63,7 +63,7 @@ fn parseHistoryFile(self: *Self, historyFilePath: []const u8) !void {
         _ = std.mem.replace(u8, line, " ", "", key);
 
         //if key does not already exist we need to update the value, otherwise
-        //we update the copies counter
+        //we update the reruns counter
         const res = self.hist.getOrPut(key) catch |err| {
             log.err("self.hist.getOrPut failed: {any}", .{err});
             self.alloc.free(key);
@@ -71,14 +71,14 @@ fn parseHistoryFile(self: *Self, historyFilePath: []const u8) !void {
             continue;
         };
         if (res.found_existing == true) {
-            res.value_ptr.copies += 1;
+            res.value_ptr.reruns += 1;
             self.alloc.free(key);
             self.alloc.free(cmd);
             continue;
         }
         res.value_ptr.command = cmd;
         res.value_ptr.timestamp = "2006";
-        res.value_ptr.copies = 0;
+        res.value_ptr.reruns = 0;
     }
 }
 

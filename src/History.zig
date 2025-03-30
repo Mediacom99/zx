@@ -90,10 +90,19 @@ fn parseHistoryFile(self: *Self, historyFilePath: []const u8) !void {
     }
 }
 
+/// debug function: prints all values formatted
 pub fn debugPrint(self: Self) void {
     var it = self.hist.iterator();
     while (it.next()) |e| {
         std.debug.print("{s}({d}) ", .{ e.value_ptr.timestamp, e.value_ptr.reruns });
         std.debug.print("{s}\n", .{e.value_ptr.command});
+    }
+}
+
+/// debug function: prints all key hashes
+pub fn debugPrintHashes(self: Self) void {
+    const hashes = self.hist.unmanaged.entries.items(.hash);
+    for (hashes) |hash| {
+        std.debug.print("0x{x}\n", .{hash});
     }
 }

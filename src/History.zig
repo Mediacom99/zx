@@ -10,11 +10,13 @@ hist: CommandList,
 alloc: std.mem.Allocator,
 
 pub const Command = struct {
-    /// timestamp or number
-    timestamp: []const u8,
-    command: []const u8,
-    /// How many times the command appears in history after the first time
-    reruns: usize,
+    /// Actual command with spaces
+    command: []const u8 = undefined,
+
+    timestamp: []const u8 = undefined,
+
+    //How many times the command was found in history
+    reruns: usize = 1,
 };
 
 /// Initialize History Service with given history file
@@ -64,7 +66,8 @@ fn parseHistoryFile(self: *Self, historyFilePath: []const u8) !void {
 
         //Find size of line without spaces
         const replSize = std.mem.replacementSize(u8, line, " ", "");
-        try key.resize(replSize);
+        try key.ensureTotalCapacityPrecise(replSize);
+        key.clearRetainingCapacity();
 
         //remove spaces
         for (line) |c| {
@@ -72,17 +75,18 @@ fn parseHistoryFile(self: *Self, historyFilePath: []const u8) !void {
                 try key.append(c);
             }
         }
-        const res = try self.hist.getOrPut(key.items);
-        //if key already exists we increment reruns
-        if (res.found_existing == true) {
-            res.value_ptr.reruns += 1;
-            continue;
+
+        var new_cmd = Command{ .timestamp = "TODO" };
+
+        //if key already exists remove old one and reinsert it.
+        if (self.hist.fetchOrderedRemove(key.items)) |kv| {
+            new_cmd.command = kv.value.command;
+            new_cmd.reruns = kv.value.reruns + 1;
+            try self.hist.put(kv.key, new_cmd);
+        } else {
+            new_cmd.command = try self.alloc.dupe(u8, line);
+            try self.hist.put(key.items, new_cmd);
         }
-        //key doesnt exist, we add one. The variable `cmd` is freed in deinit.
-        const cmd = try self.alloc.dupe(u8, line);
-        res.value_ptr.command = cmd;
-        res.value_ptr.timestamp = "TODO";
-        res.value_ptr.reruns = 0;
     }
 }
 

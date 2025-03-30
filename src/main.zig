@@ -17,8 +17,5 @@ pub fn main() !void {
     var history = try History.init(allocator, historyFilePath);
     defer history.deinit();
 
-    var iterator = history.hist.iterator();
-    while (iterator.next()) |e| {
-        std.log.debug("{s}", .{e.value_ptr.command});
-    }
+    history.debugPrint();
 }

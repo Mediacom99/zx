@@ -1,4 +1,8 @@
 //! History service handles loading history data from different shells.
+const CommandList = std.array_hash_map.StringArrayHashMap(Command);
+const Self = @This();
+const std = @import("std");
+const log = std.log;
 
 /// ArrayHashMap containing Command structs
 hist: CommandList,
@@ -25,11 +29,9 @@ pub fn init(alloc: std.mem.Allocator, historyFilePath: []const u8) !Self {
 
 /// Frees the array hash map and keys and values if necessary
 pub fn deinit(self: *Self) void {
-    //Free heap allocated values
     var it = self.hist.iterator();
     while (it.next()) |e| {
         self.alloc.free(e.value_ptr.command);
-        self.alloc.free(e.key_ptr.*);
     }
     self.hist.deinit();
 }
@@ -40,6 +42,7 @@ fn parseHistoryFile(self: *Self, historyFilePath: []const u8) !void {
     defer file.close();
 
     const end_pos = try file.getEndPos();
+    //TODO use stack for common bash history file size, heap otherwise
     const buf = try self.alloc.alloc(u8, end_pos);
     defer self.alloc.free(buf);
 
@@ -49,40 +52,44 @@ fn parseHistoryFile(self: *Self, historyFilePath: []const u8) !void {
         return error.EmptyHistoryFile;
     }
 
+    // temp buffer
+    // ArrayList overhead is usually 24 bytes said Claude, so...
+    var key = std.ArrayList(u8).init(self.alloc);
+    defer key.deinit();
+
     // iterator over lines split by newline
-    var iterator = std.mem.splitScalar(u8, buf, '\n');
+    var iterator = std.mem.splitScalar(u8, buf[0..bytes_read], '\n');
     while (iterator.next()) |line| {
         if (line.len == 0) continue;
-        const cmd = try self.alloc.dupe(u8, line);
 
         //Find size of line without spaces
         const replSize = std.mem.replacementSize(u8, line, " ", "");
-        const key = try self.alloc.alloc(u8, replSize);
+        try key.ensureTotalCapacity(replSize);
 
-        // trim spaces and put them in key
-        _ = std.mem.replace(u8, line, " ", "", key);
-
-        //if key does not already exist we need to update the value, otherwise
-        //we update the reruns counter
-        const res = self.hist.getOrPut(key) catch |err| {
-            log.err("self.hist.getOrPut failed: {any}", .{err});
-            self.alloc.free(key);
-            self.alloc.free(cmd);
-            continue;
-        };
+        //remove spaces
+        for (line) |c| {
+            if (c != ' ') {
+                try key.append(c);
+            }
+        }
+        const res = try self.hist.getOrPut(key.items);
+        //if key already exists we increment reruns
         if (res.found_existing == true) {
             res.value_ptr.reruns += 1;
-            self.alloc.free(key);
-            self.alloc.free(cmd);
             continue;
         }
+        //key doesnt exist, we add one. The variable `cmd` is freed in deinit.
+        const cmd = try self.alloc.dupe(u8, line);
         res.value_ptr.command = cmd;
-        res.value_ptr.timestamp = "2006";
+        res.value_ptr.timestamp = "TODO";
         res.value_ptr.reruns = 0;
     }
 }
 
-const CommandList = std.array_hash_map.StringArrayHashMap(Command);
-const Self = @This();
-const std = @import("std");
-const log = std.log;
+pub fn debugPrint(self: Self) void {
+    var it = self.hist.iterator();
+    while (it.next()) |e| {
+        std.debug.print("{s}({d}) ", .{ e.value_ptr.timestamp, e.value_ptr.reruns });
+        std.debug.print("{s}\n", .{e.value_ptr.command});
+    }
+}

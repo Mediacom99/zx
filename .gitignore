@@ -1,4 +1,6 @@
 zig-out/*
 .zig-cache/*
 prova
-
+shakespeare.txt
+prova.txt
+output.log

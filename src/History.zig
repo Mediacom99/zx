@@ -19,6 +19,7 @@ pub const Command = struct {
 
     //How many times the command was found in history
     copies: usize = 1,
+
 };
 
 /// Initialize History Service with given history file
@@ -40,9 +41,9 @@ pub fn deinit(self: *Self) void {
     self.hist.deinit();
 }
 
-//parses bash history file. The file is always closed.
+
+/// parses history file and loads it into internal hash map.
 fn parseHistoryFile(self: *Self, historyFilePath: []const u8) !void {
-    //get hist file handle
     var file = try std.fs.openFileAbsolute(historyFilePath, .{});
     defer file.close();
 
@@ -52,14 +53,12 @@ fn parseHistoryFile(self: *Self, historyFilePath: []const u8) !void {
     try content.resize(end_pos);
     defer content.deinit();
 
-    // read file in buf arraylist
     const bytes_read = try file.readAll(content.items);
     log.debug("history file loaded, bytes read: {d}", .{bytes_read});
     if (bytes_read <= 0) {
         return error.EmptyHistoryFile;
     }
 
-    //TODO add file sanitization
     sanitizer.sanitizeFile(&content);
 
     const contentTrimmed = std.mem.trim(u8, content.items, "\n"); //FIXME need this?
@@ -75,17 +74,13 @@ fn parseHistoryFile(self: *Self, historyFilePath: []const u8) !void {
                 key_len+=1;
             }
         }
+        if (key_len == 0) continue;
         const key = keyBuf[0..key_len];
-        
-        // log.debug("Key: {s}", .{key});
-        // log.debug("Cmd: {s}", .{cmd});
         var new_cmd = Command{};
         if (self.hist.fetchOrderedRemove(key)) |kv| {
-            //already seen this command, just updated reruns count
             new_cmd.command = kv.value.command;
             new_cmd.copies = kv.value.copies + 1;
         } else {
-            //we need to allocate for the new command
             const notOwnedCmd = try self.alloc.dupe(u8, cmd);
             new_cmd.command = notOwnedCmd;
         }
@@ -94,7 +89,6 @@ fn parseHistoryFile(self: *Self, historyFilePath: []const u8) !void {
 
 }
 
-/// debug function: prints all values formatted
 pub fn debugPrint(self: Self) void {
     var it = self.hist.iterator();
     while (it.next()) |e| {
@@ -102,7 +96,6 @@ pub fn debugPrint(self: Self) void {
     }
 }
 
-/// debug function: prints all key hashes
 pub fn debugPrintHashes(self: Self) void {
     const hashes = self.hist.unmanaged.entries.items(.hash);
     for (hashes) |hash| {

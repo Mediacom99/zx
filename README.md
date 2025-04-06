@@ -18,14 +18,17 @@ Built using [libvaxis](https://github.com/rockorager/libvaxis) modern tui librar
 - [x] read and parse bash history file into data structure
 - [x] clean input
 - [x] remove duplicates, keep only last command and add number of duplicates
-- [ ] add some configuration options
-- [ ] better logging ?
 - [ ] display history entries in scrollable list
 - [ ] history navigation with vim-keys
+- [ ] execute selected command
 - [ ] searching/filtering
-- [ ] copy to clipboard / execute selected command
+- [ ] add some configuration options
+- [ ] better logging
+- [ ] copy command to clipboard
+- [ ] tokenize each command to differentiate between root and arguments
 - [ ] select multiple commands and chain them or pipe stuff between them
 - [ ] add blacklist feature (those commands will be ignored if found in histfile)
+- [ ] modify command and single argument(s)
 
 ## Advanced features
 

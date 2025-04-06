@@ -5,6 +5,8 @@ const std = @import("std");
 const log = std.log;
 const sanitizer = @import("sanitizer.zig");
 
+const KEY_SIZE = 255;
+
 /// ArrayHashMap containing Command structs
 hist: CommandList,
 
@@ -41,57 +43,53 @@ pub fn deinit(self: *Self) void {
 
 //parses bash history file. The file is always closed.
 fn parseHistoryFile(self: *Self, historyFilePath: []const u8) !void {
+    //get hist file handle
     var file = try std.fs.openFileAbsolute(historyFilePath, .{});
     defer file.close();
 
-    const end_pos = try file.getEndPos();
     //TODO use stack for common bash history file size, heap otherwise
-    const buf = try self.alloc.alloc(u8, end_pos);
-    defer self.alloc.free(buf);
+    const end_pos = try file.getEndPos();
+    const content = try self.alloc.alloc(u8, end_pos);
+    defer self.alloc.free(content);
 
-    const bytes_read = try file.readAll(buf);
+    // read file in buf arraylist
+    const bytes_read = try file.readAll(content);
     log.debug("history file loaded, bytes read: {d}", .{bytes_read});
     if (bytes_read <= 0) {
         return error.EmptyHistoryFile;
     }
+    const buf = std.mem.trim(u8, content, "\n");
+    //TODO add file sanitization
 
-    // _ = try sanitizer.sanitize(buf);
+    // const replSize = std.mem.replacementSize(u8, buf, " ", "");
+    // const bufNoSpaces = try self.alloc.alloc(u8, replSize);
+    // defer self.alloc.free(bufNoSpaces);
 
-    // temp buffer
-    // ArrayList overhead is usually 24 bytes said Claude, so...
-    var key = std.ArrayList(u8).init(self.alloc);
-    defer key.deinit();
+    // const replaced = std.mem.replace(u8, buf, " ", "", bufNoSpaces);
+    // log.debug("Spaces replaced: {d}", .{replaced});
 
-    // iterator over lines split by newline
-    var iterator = std.mem.splitScalar(u8, buf[0..bytes_read], '\n');
-    while (iterator.next()) |line| {
-        if (line.len == 0) continue;
-
-        //Find size of line without spaces
-        const replSize = std.mem.replacementSize(u8, line, " ", "");
-        key.clearRetainingCapacity();
-        try key.ensureTotalCapacityPrecise(replSize);
-
-        //remove spaces
-        for (line) |c| {
-            if (c != ' ') {
-                key.appendAssumeCapacity(c);
+    var iter = std.mem.splitScalar(u8, buf, '\n');
+    while(iter.next()) |cmd| {
+        //the key is made up of the first KEY_SIZE chars of cmd that are not spaces
+        var keyBuf: [KEY_SIZE]u8 = undefined;
+        var key_len: usize = 0;
+        for (0..KEY_SIZE) |i| {
+            if (i == cmd.len) break;
+            if (cmd[i] != ' '){ 
+                keyBuf[key_len] = cmd[i];
+                key_len+=1;
             }
         }
-
-        var new_cmd = Command{ .timestamp = "" }; //TODO add timestamp
-
-        // TODO redo this by checking if key already exists
-        //if key already exists remove old one and reinsert it.
-        if (self.hist.fetchOrderedRemove(key.items)) |kv| {
-            new_cmd.command = kv.value.command;
-            new_cmd.reruns = kv.value.reruns + 1;
-            try self.hist.put(kv.key, new_cmd);
-        } else {
-            new_cmd.command = try self.alloc.dupe(u8, line);
-            try self.hist.put(key.items, new_cmd);
-        }
+        const key = keyBuf[0..key_len];
+        
+        log.debug("Key: {s}", .{key});
+        log.debug("Cmd: {s}\n", .{cmd});
+        //create cmd with cmd timestamp
+        //fetchOrderderdRemove from hash map
+        //if does NOT already exists, dupe the line, (free it in deinit)
+        //otherwise reinsert a new kv pair with same old command address (free in deinit)
     }
+
 }
 
 /// debug function: prints all values formatted

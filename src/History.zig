@@ -3,7 +3,7 @@ const CommandList = std.array_hash_map.StringArrayHashMap(Command);
 const Self = @This();
 const std = @import("std");
 const log = std.log;
-const sanitizer = @import("sanitizer.zig");
+const utils = @import("utils.zig");
 
 ///max (non space) command chars hashed to create the key
 const KEY_SIZE: usize = 255;
@@ -16,10 +16,9 @@ alloc: std.mem.Allocator,
 pub const Command = struct {
     /// Actual command with spaces
     command: []const u8 = undefined,
-
+    
     //How many times the command was found in history
     copies: usize = 1,
-
 };
 
 /// Initialize History Service with given history file
@@ -58,10 +57,10 @@ fn parseHistoryFile(self: *Self, historyFilePath: []const u8) !void {
     if (bytes_read <= 0) {
         return error.EmptyHistoryFile;
     }
+    utils.sanitizeAscii(&content);
 
-    sanitizer.sanitizeFile(&content);
-
-    const contentTrimmed = std.mem.trim(u8, content.items, "\n"); //FIXME need this?
+    //FIXME need this?
+    const contentTrimmed = std.mem.trim(u8, content.items, "\n"); 
     var iter = std.mem.splitScalar(u8, contentTrimmed, '\n');
     while(iter.next()) |cmd| {
         //the key is made up of the first KEY_SIZE chars of cmd that are not spaces
@@ -86,7 +85,6 @@ fn parseHistoryFile(self: *Self, historyFilePath: []const u8) !void {
         }
         try self.hist.putNoClobber(key, new_cmd);
     }
-
 }
 
 pub fn debugPrint(self: Self) void {

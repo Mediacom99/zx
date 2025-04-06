@@ -50,8 +50,8 @@ fn parseHistoryFile(self: *Self, historyFilePath: []const u8) !void {
     //TODO use stack for common bash history file size, heap otherwise
     const end_pos = try file.getEndPos();
     var content = try std.ArrayList(u8).initCapacity(self.alloc, end_pos);
-    try content.resize(end_pos);
     defer content.deinit();
+    try content.resize(end_pos);
 
     const bytes_read = try file.readAll(content.items);
     log.debug("history file loaded, bytes read: {d}", .{bytes_read});

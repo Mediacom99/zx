@@ -2,7 +2,7 @@ const std = @import("std");
 const History = @import("History.zig");
 
 // const historyFilePath = "/home/mediacom/development/zhist/prova.txt";
-const historyFilePath = "/home/mediacom/.bash_history";
+const historyFilePath = "/home/mediacom/.histfile";
 
 pub fn main() !void {
     var gpa = std.heap.DebugAllocator(.{}).init;

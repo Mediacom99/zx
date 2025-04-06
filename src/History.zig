@@ -3,6 +3,7 @@ const CommandList = std.array_hash_map.StringArrayHashMap(Command);
 const Self = @This();
 const std = @import("std");
 const log = std.log;
+const sanitizer = @import("sanitizer.zig");
 
 /// ArrayHashMap containing Command structs
 hist: CommandList,
@@ -54,6 +55,8 @@ fn parseHistoryFile(self: *Self, historyFilePath: []const u8) !void {
         return error.EmptyHistoryFile;
     }
 
+    // _ = try sanitizer.sanitize(buf);
+
     // temp buffer
     // ArrayList overhead is usually 24 bytes said Claude, so...
     var key = std.ArrayList(u8).init(self.alloc);
@@ -78,6 +81,7 @@ fn parseHistoryFile(self: *Self, historyFilePath: []const u8) !void {
 
         var new_cmd = Command{ .timestamp = "" }; //TODO add timestamp
 
+        // TODO redo this by checking if key already exists
         //if key already exists remove old one and reinsert it.
         if (self.hist.fetchOrderedRemove(key.items)) |kv| {
             new_cmd.command = kv.value.command;

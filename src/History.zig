@@ -5,7 +5,8 @@ const std = @import("std");
 const log = std.log;
 const sanitizer = @import("sanitizer.zig");
 
-const KEY_SIZE = 255;
+///max (non space) command chars hashed to create the key
+const KEY_SIZE: usize = 255;
 
 /// ArrayHashMap containing Command structs
 hist: CommandList,
@@ -16,10 +17,8 @@ pub const Command = struct {
     /// Actual command with spaces
     command: []const u8 = undefined,
 
-    timestamp: []const u8 = undefined,
-
     //How many times the command was found in history
-    reruns: usize = 1,
+    copies: usize = 1,
 };
 
 /// Initialize History Service with given history file
@@ -49,26 +48,22 @@ fn parseHistoryFile(self: *Self, historyFilePath: []const u8) !void {
 
     //TODO use stack for common bash history file size, heap otherwise
     const end_pos = try file.getEndPos();
-    const content = try self.alloc.alloc(u8, end_pos);
-    defer self.alloc.free(content);
+    var content = try std.ArrayList(u8).initCapacity(self.alloc, end_pos);
+    try content.resize(end_pos);
+    defer content.deinit();
 
     // read file in buf arraylist
-    const bytes_read = try file.readAll(content);
+    const bytes_read = try file.readAll(content.items);
     log.debug("history file loaded, bytes read: {d}", .{bytes_read});
     if (bytes_read <= 0) {
         return error.EmptyHistoryFile;
     }
-    const buf = std.mem.trim(u8, content, "\n");
+
     //TODO add file sanitization
+    sanitizer.sanitizeFile(&content);
 
-    // const replSize = std.mem.replacementSize(u8, buf, " ", "");
-    // const bufNoSpaces = try self.alloc.alloc(u8, replSize);
-    // defer self.alloc.free(bufNoSpaces);
-
-    // const replaced = std.mem.replace(u8, buf, " ", "", bufNoSpaces);
-    // log.debug("Spaces replaced: {d}", .{replaced});
-
-    var iter = std.mem.splitScalar(u8, buf, '\n');
+    const contentTrimmed = std.mem.trim(u8, content.items, "\n"); //FIXME need this?
+    var iter = std.mem.splitScalar(u8, contentTrimmed, '\n');
     while(iter.next()) |cmd| {
         //the key is made up of the first KEY_SIZE chars of cmd that are not spaces
         var keyBuf: [KEY_SIZE]u8 = undefined;
@@ -82,12 +77,19 @@ fn parseHistoryFile(self: *Self, historyFilePath: []const u8) !void {
         }
         const key = keyBuf[0..key_len];
         
-        log.debug("Key: {s}", .{key});
-        log.debug("Cmd: {s}\n", .{cmd});
-        //create cmd with cmd timestamp
-        //fetchOrderderdRemove from hash map
-        //if does NOT already exists, dupe the line, (free it in deinit)
-        //otherwise reinsert a new kv pair with same old command address (free in deinit)
+        // log.debug("Key: {s}", .{key});
+        // log.debug("Cmd: {s}", .{cmd});
+        var new_cmd = Command{};
+        if (self.hist.fetchOrderedRemove(key)) |kv| {
+            //already seen this command, just updated reruns count
+            new_cmd.command = kv.value.command;
+            new_cmd.copies = kv.value.copies + 1;
+        } else {
+            //we need to allocate for the new command
+            const notOwnedCmd = try self.alloc.dupe(u8, cmd);
+            new_cmd.command = notOwnedCmd;
+        }
+        try self.hist.putNoClobber(key, new_cmd);
     }
 
 }
@@ -96,8 +98,7 @@ fn parseHistoryFile(self: *Self, historyFilePath: []const u8) !void {
 pub fn debugPrint(self: Self) void {
     var it = self.hist.iterator();
     while (it.next()) |e| {
-        std.debug.print("{s}({d}) ", .{ e.value_ptr.timestamp, e.value_ptr.reruns });
-        std.debug.print("{s}\n", .{e.value_ptr.command});
+        std.debug.print("[{d}] {s}\n", .{ e.value_ptr.copies, e.value_ptr.command });
     }
 }
 

@@ -3,7 +3,7 @@
 const std = @import("std");
 
 fn isNotPrintableAscii(item: u8) bool {
-    return (item < 0x1f and item != '\n') or item >= 127;
+    return (item < 0x1f and item != '\n') or item >= 0x7f;
 }
 /// Sanitizes user input following these steps:
 /// 1. control char removal

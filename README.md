@@ -6,9 +6,12 @@ to manage and navigate command history for common shells like bash, zsh and fish
 Built using [libvaxis](https://github.com/rockorager/libvaxis) modern tui library.
 
 ## Optimizations
-1. Use arena allocator
+1. Use arena allocator for commands (frequents `dupe` calls fragment memory)
 2. Use simd instruction when parsing file
 3. use stack instead of heap for small file sizes (< 4KB)
+4. Use simd instruction for sanitize ascii and key generation
+5. New hash function, optimize hash operations
+6. Unbuffered IO / syscall overhead (fix)
 
 ## Supported shells
 
@@ -37,6 +40,7 @@ Built using [libvaxis](https://github.com/rockorager/libvaxis) modern tui librar
 
 ## Advanced features
 
+- [ ] parallel file's chunks parsing (threads)
 - [ ] create, save, list and use custom scripts
 - [ ] store history on db (local and cloud (?))
 - [ ] sync between devices

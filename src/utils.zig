@@ -14,14 +14,7 @@ inline fn shouldRemove(item: u8) bool {
     return (isNonPrintableAscii(item) and item != '\n') or isExtendedAscii(item);
 }
 
-/// Sanitizes user input following these steps:
-/// 1. control char removal
-/// 2. special char escaping
-/// 3. command substitution neutralization
-/// 4. whitespace normalization
-/// 5. input validation (allow only alphanumunicode)
-/// 6. encoding validation (?)
-/// Preserves ordering.
+//TODO escape control/special chars ($, ...)
 pub fn sanitizeAscii(input: *std.ArrayList(u8)) void {
     var src: usize = 0;
     var dst: usize = 0;

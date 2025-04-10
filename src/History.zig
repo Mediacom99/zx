@@ -9,12 +9,15 @@ const utils = @import("utils.zig");
 ///max non-space bytes hashed to create the key
 const keySize: usize = 255;
 
+//Used to prealloacate space for hash maps
 const bytesPerLine: usize = 32;
 
 /// ArrayHashMap containing Command structs
 hist: CommandList,
 
 alloc: std.mem.Allocator,
+
+cmd_arena: std.heap.ArenaAllocator,
 
 file_path: []const u8 = undefined,
 
@@ -32,6 +35,7 @@ pub fn init(alloc: std.mem.Allocator, histfile_path: []const u8) !Self {
         .file_path = histfile_path,
         .hist = CommandList.init(alloc),
         .alloc = alloc,
+        .cmd_arena = std.heap.ArenaAllocator.init(alloc),
     };
     try newSelf.parseFile(histfile_path);
     return newSelf;
@@ -39,10 +43,7 @@ pub fn init(alloc: std.mem.Allocator, histfile_path: []const u8) !Self {
 
 /// Frees the array hash map and all keys and values heap allocated.
 pub fn deinit(self: *Self) void {
-    var it = self.hist.iterator();
-    while (it.next()) |e| {
-        self.alloc.free(e.value_ptr.command);
-    }
+    self.cmd_arena.deinit();
     self.hist.deinit();
 }
 
@@ -57,6 +58,7 @@ fn parseFile(self: *Self, path: []const u8) !void {
     }
     defer file.close();
     
+    //TODO do we need this ?
     const metadata = try file.metadata();
     try self.hist.ensureTotalCapacity(@intCast(metadata.size() / bytesPerLine));
 
@@ -89,15 +91,17 @@ fn parseFile(self: *Self, path: []const u8) !void {
         }
         if (key_len == 0) continue;
         const key = keyBuf[0..key_len];
-        var new_cmd = Command{};
-        if (self.hist.fetchOrderedRemove(key)) |kv| {
-            new_cmd.command = kv.value.command;
-            new_cmd.copies = kv.value.copies + 1;
+        //TODO add arraylist with entries to preserve order
+        //we use hashmaps only for fast lookups
+        const gop = try self.hist.getOrPut(key);
+        if (gop.found_existing) {
+            gop.value_ptr.copies += 1;
         } else {
-            const notOwnedCmd = try self.alloc.dupe(u8, cmd);
-            new_cmd.command = notOwnedCmd;
+            gop.value_ptr.* = .{
+                .copies = 1,
+                .command = try self.cmd_arena.allocator().dupe(u8, cmd),
+            };
         }
-        try self.hist.putNoClobber(key, new_cmd);
     }
 }
 

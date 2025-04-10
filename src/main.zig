@@ -1,7 +1,7 @@
 const std = @import("std");
-const History = @import("History.zig");
+const App = @import("App.zig");
 
-const historyFilePath = "/home/mediacom/.histfile";
+const historyFilePath = "/Users/edoardo/.zsh_history";
 // const historyFilePath = "/home/mediacom/code/zhist/histfile";
 
 pub fn main() !void {
@@ -14,8 +14,9 @@ pub fn main() !void {
     }
     const allocator = gpa.allocator();
 
-    var history = try History.init(allocator, historyFilePath);
-    defer history.deinit();
+    var app = try App.init(allocator, historyFilePath);
+    defer app.deinit();
 
-    history.debugPrint();
+    _ = app.prova();
+
 }

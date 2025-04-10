@@ -3,11 +3,25 @@ const vaxis = @import("vaxis");
 const vxfw = vaxis.vxfw;
 const Self = @This();
 const Allocator = std.mem.Allocator;
+const History = @import("History.zig");
 
-list_view: vxfw.ListView,
-text_field: vxfw.TextField,
+list_view: vxfw.ListView = undefined,
+text_field: vxfw.TextField = undefined,
+history: History,
+
+pub fn init(allocator: Allocator, historyFilePath: []const u8) !Self {
+    return Self {
+        .history = try History.init(allocator, historyFilePath),
+    };
+}
+
+pub fn deinit(self: *Self) void {
+    self.history.deinit();
+    return;
+}
 
 pub fn widget(self: *Self) vxfw.Widget {
+    self.history.debugPrint();
     return .{
         .userdata = self,
         .eventHandler = Self.typeErasedEventHandler,

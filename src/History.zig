@@ -1,6 +1,6 @@
 //! History service handles loading history data from different shells.
 
-const CommandList = std.array_hash_map.StringArrayHashMap(Command);
+const LinkedHashMap = std.array_hash_map.StringArrayHashMap(Node);
 const Self = @This();
 const std = @import("std");
 const log = std.log;
@@ -12,8 +12,16 @@ const keySize: usize = 255;
 //Used to prealloacate space for hash maps
 const bytesPerLine: usize = 32;
 
-/// ArrayHashMap containing Command structs
-hist: CommandList,
+//TODO 
+// Linked hash map:
+// 1. the element I hash is the doubly linked list node with these fields:
+// command string heap allocated with arena
+// copies (count of cmd duplicates)
+// previous_command_key (contains key of previous command in the order of hist file)
+// next_command_key (contains key of next command in the order of hist file)
+//
+// So that wen I find a duplicate with getOrPut I know where it was and I can just access it, increase copies and change previous_command_key and next_command_key accordingly to put it first in the doubly linked list
+//
 
 alloc: std.mem.Allocator,
 
@@ -21,21 +29,33 @@ cmd_arena: std.heap.ArenaAllocator,
 
 file_path: []const u8 = undefined,
 
-pub const Command = struct {
+/// ArrayHashMap containing Command structs
+map: LinkedHashMap,
+
+head: ?*Node, //Most recently used
+
+tail: ?*Node, //Last recently used
+
+size: usize = 0, //Current number of entries
+
+pub const Node = struct {
     /// Actual command with spaces
-    command: []const u8 = undefined,
-    
+    command: []const u8,
     //How many times the command was found in history
     copies: usize = 1,
+    //next node
+    next: ?*Node = null,
+    //previous node
+    prev: ?*Node = null,
 };
 
 /// Initialize History Service with given history file
 pub fn init(alloc: std.mem.Allocator, histfile_path: []const u8) !Self {
     var newSelf = Self{
-        .file_path = histfile_path,
-        .hist = CommandList.init(alloc),
         .alloc = alloc,
         .cmd_arena = std.heap.ArenaAllocator.init(alloc),
+        .file_path = histfile_path,
+        .map = LinkedHashMap.init(alloc),
     };
     try newSelf.parseFile(histfile_path);
     return newSelf;
@@ -44,7 +64,7 @@ pub fn init(alloc: std.mem.Allocator, histfile_path: []const u8) !Self {
 /// Frees the array hash map and all keys and values heap allocated.
 pub fn deinit(self: *Self) void {
     self.cmd_arena.deinit();
-    self.hist.deinit();
+    self.map.deinit();
 }
 
 
@@ -91,8 +111,6 @@ fn parseFile(self: *Self, path: []const u8) !void {
         }
         if (key_len == 0) continue;
         const key = keyBuf[0..key_len];
-        //TODO add arraylist with entries to preserve order
-        //we use hashmaps only for fast lookups
         const gop = try self.hist.getOrPut(key);
         if (gop.found_existing) {
             gop.value_ptr.copies += 1;

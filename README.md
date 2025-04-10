@@ -6,7 +6,7 @@ to manage and navigate command history for common shells like bash, zsh and fish
 Built using [libvaxis](https://github.com/rockorager/libvaxis) modern tui library.
 
 ## Optimizations
-1. Use arena allocator for commands (frequents `dupe` calls fragment memory)
+1. Use linked list + hash map by hashing nodes
 2. Use simd instruction when parsing file
 3. use stack instead of heap for small file sizes (< 4KB)
 4. Use simd instruction for sanitize ascii and key generation

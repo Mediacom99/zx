@@ -1,17 +1,22 @@
 //! History service handles loading history data from different shells.
+
 const CommandList = std.array_hash_map.StringArrayHashMap(Command);
 const Self = @This();
 const std = @import("std");
 const log = std.log;
 const utils = @import("utils.zig");
 
-///max (non space) command chars hashed to create the key
-const KEY_SIZE: usize = 255;
+///max non-space bytes hashed to create the key
+const keySize: usize = 255;
+
+const bytesPerLine: usize = 32;
 
 /// ArrayHashMap containing Command structs
 hist: CommandList,
 
 alloc: std.mem.Allocator,
+
+file_path: []const u8 = undefined,
 
 pub const Command = struct {
     /// Actual command with spaces
@@ -22,16 +27,17 @@ pub const Command = struct {
 };
 
 /// Initialize History Service with given history file
-pub fn init(alloc: std.mem.Allocator, historyFilePath: []const u8) !Self {
+pub fn init(alloc: std.mem.Allocator, histfile_path: []const u8) !Self {
     var newSelf = Self{
+        .file_path = histfile_path,
         .hist = CommandList.init(alloc),
         .alloc = alloc,
     };
-    try newSelf.parseHistoryFile(historyFilePath);
+    try newSelf.parseFile(histfile_path);
     return newSelf;
 }
 
-/// Frees the array hash map and keys and values if necessary
+/// Frees the array hash map and all keys and values heap allocated.
 pub fn deinit(self: *Self) void {
     var it = self.hist.iterator();
     while (it.next()) |e| {
@@ -42,9 +48,17 @@ pub fn deinit(self: *Self) void {
 
 
 /// parses history file and loads it into internal hash map.
-fn parseHistoryFile(self: *Self, historyFilePath: []const u8) !void {
-    var file = try std.fs.openFileAbsolute(historyFilePath, .{});
+fn parseFile(self: *Self, path: []const u8) !void {
+    var file: std.fs.File = undefined;
+    if (std.fs.path.isAbsolute(path)) {
+        file = try std.fs.openFileAbsolute(path, .{});
+    } else {
+        file = try std.fs.cwd().openFile(path, .{});
+    }
     defer file.close();
+    
+    const metadata = try file.metadata();
+    try self.hist.ensureTotalCapacity(@intCast(metadata.size() / bytesPerLine));
 
     //TODO use stack for common bash history file size, heap otherwise
     const end_pos = try file.getEndPos();
@@ -63,10 +77,10 @@ fn parseHistoryFile(self: *Self, historyFilePath: []const u8) !void {
     const contentTrimmed = std.mem.trim(u8, content.items, "\n"); 
     var iter = std.mem.splitScalar(u8, contentTrimmed, '\n');
     while(iter.next()) |cmd| {
-        //the key is made up of the first KEY_SIZE chars of cmd that are not spaces
-        var keyBuf: [KEY_SIZE]u8 = undefined;
+        //the key is the first KEY_SIZE bytes of cmd that are not spaces
+        var keyBuf: [keySize]u8 = undefined;
         var key_len: usize = 0;
-        for (0..KEY_SIZE) |i| {
+        for (0..keySize) |i| {
             if (i == cmd.len) break;
             if (cmd[i] != ' '){ 
                 keyBuf[key_len] = cmd[i];

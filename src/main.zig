@@ -1,22 +1,24 @@
 const std = @import("std");
 const App = @import("App.zig");
 
-const historyFilePath = "/Users/edoardo/.zsh_history";
-// const historyFilePath = "/home/mediacom/code/zhist/histfile";
 
 pub fn main() !void {
-    var gpa = std.heap.DebugAllocator(.{}).init;
+    var args = std.process.args();
+    _ = args.skip();
+    const historyFilePath = args.next() orelse {
+         return error.InvalidHistoryFilePath;
+    };
+
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer {
         const leaked = gpa.deinit();
         if (leaked != std.heap.Check.ok) {
-            std.debug.print("Memory leak detected!\n", .{});
+            std.log.err("Memory leak detected!\n", .{});
         }
     }
-    const allocator = gpa.allocator();
 
+    const allocator = gpa.allocator();
     var app = try App.init(allocator, historyFilePath);
     defer app.deinit();
-
-    _ = app.prova();
-
+    app.history.debugPrint();
 }

@@ -2,9 +2,18 @@
 
 const std = @import("std");
 
-fn isNotPrintableAscii(item: u8) bool {
-    return (item < 0x1f and item != '\n') or item >= 0x7f;
+inline fn isNonPrintableAscii(item: u8) bool {
+    return item <= 0x1f;
 }
+
+inline fn isExtendedAscii(item: u8) bool {
+    return item >= 0x7f;
+}
+
+inline fn shouldRemove(item: u8) bool {
+    return (isNonPrintableAscii(item) and item != '\n') or isExtendedAscii(item);
+}
+
 /// Sanitizes user input following these steps:
 /// 1. control char removal
 /// 2. special char escaping
@@ -14,13 +23,14 @@ fn isNotPrintableAscii(item: u8) bool {
 /// 6. encoding validation (?)
 /// Preserves ordering.
 pub fn sanitizeAscii(input: *std.ArrayList(u8)) void {
-    var idx: usize = input.items.len;
-    if (idx == 0) return;
-    while (idx > 0) {
-        idx -= 1;
-        if (isNotPrintableAscii(input.items[idx])) {
-            _ = input.orderedRemove(idx);
+    var src: usize = 0;
+    var dst: usize = 0;
+    const items = input.items;
+    while (src < items.len): (src += 1) {
+        if (!shouldRemove(items[src])) {
+            items[dst] = items[src];
+            dst+=1;
         }
     }
-    return;
+    input.shrinkRetainingCapacity(dst); //bulk free
 }

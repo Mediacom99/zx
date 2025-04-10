@@ -5,6 +5,11 @@ to manage and navigate command history for common shells like bash, zsh and fish
 
 Built using [libvaxis](https://github.com/rockorager/libvaxis) modern tui library.
 
+## Optimizations
+1. Use arena allocator
+2. Use simd instruction when parsing file
+3. use stack instead of heap for small file sizes (< 4KB)
+
 ## Supported shells
 
 - [X] bash

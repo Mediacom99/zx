@@ -12,8 +12,8 @@ pub fn LinkedHash(comptime V: type) type {
 
         alloc: std.mem.Allocator,
 
-        //Not good if many nodes need to be deleted and memory reclaimed 
-        //In my case I dont really delete nodes.
+        ///Internal arena allocator to manage nodes
+        ///Not good if node deallocation is frequent. 
         node_alloc: std.heap.ArenaAllocator, 
         
         /// Current head of linked list (most recent inserted)

@@ -1,0 +1,2 @@
+#!/usr/bin/bash
+zig build --release=fast test-lh --summary  all

@@ -1,5 +1,3 @@
-//! string context.
-//! V memory has to be freed by user, we just handle pointers.
 //! TODO:
 //!     1. Add capacity and ability to preallocate (and all the assumeCapacity functions)
 //!     2. Add support for custom contexts (like StringContext in std)
@@ -16,6 +14,7 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
         const Self = @This();
         const HashMap = std.HashMapUnmanaged(K, *Node, Context, 80);
         
+        ///TODO Do we need this ?
         alloc: std.mem.Allocator,
 
         ///Internal arena allocator to manage nodes
@@ -29,7 +28,8 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
         tail: ?*Node = undefined,
 
         /// Current number of element in linked list
-        size: usize = undefined,
+        /// HashMap.Size is u32, dont know if we should match the type of DLL size
+        size: HashMap.Size = undefined,
         
         /// Instance of array hash map with Node as value 
         map: HashMap = undefined,
@@ -58,6 +58,9 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
 
         /// puts (K,V) in hash map and appends new node to end of linked list
         pub fn append(self: *Self, key: K, val: V) !void {
+            if (@sizeOf(K) == 0 or @sizeOf(V) == 0) {
+                @compileError("K or V sizes are zero");
+            }
             //todo add checking for the types V and K
             var node = try self.node_alloc.allocator().create(Self.Node);
             node.key = key;
@@ -92,7 +95,6 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
                 });
                 count+=1;
             }
-            std.debug.print("DLL size: {}\n", .{self.size});
         }
         
         pub fn debugHashMap(self: *Self) void {
@@ -130,8 +132,8 @@ test "linked_hash_init" {
     try lh.append("CHIAVEDUE", "asdjaksdjaskdjaskdjaskdasjdkasjdkasjdkas");
     try lh.append("CHIAVETRE", "adkuik akskudei askdue *((((()))))");
     try lh.append("CHIAVEQUATTRO", "12049-094)(A_)D*(AS&DA(SD)");
-    try lh.append("CHIAVECINQUE", "EDOAROASODIASODIASO");
    
+    std.debug.print("LinkedHash size: {}\n", .{lh.size});
     lh.debugListFromHead();
     lh.debugHashMap();
 }

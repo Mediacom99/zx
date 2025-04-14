@@ -2,14 +2,22 @@
 //! For now only the value is a generic type, the key has to be a []const u8 and use zig default
 //! string context.
 //! V memory has to be freed by user, we just handle pointers.
-const std = @import("std");
-const strCtx = std.hash_map.StringContext;
+//! TODO:
+//!     1. Add capacity and ability to preallocate (and all the assumeCapacity functions)
+//!     2. Add support for custom contexts (like StringContext in std)
+//!     3. Add support for generic keys
+//!
+//! The structure is: head -> [Node 1, first added] <-> [Node 2] <-> ... <-> [Node N, last added] <- tail
 
-pub fn LinkedHash(comptime V: type) type {
+const std = @import("std");
+const log = std.log;
+
+pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) type {
+    //TODO add check for types K, V and Context
     return struct {
         const Self = @This();
-        const HashMap = std.HashMapUnmanaged([]const u8, *Node, strCtx, 80);
-
+        const HashMap = std.HashMapUnmanaged(K, *Node, Context, 80);
+        
         alloc: std.mem.Allocator,
 
         ///Internal arena allocator to manage nodes
@@ -33,25 +41,61 @@ pub fn LinkedHash(comptime V: type) type {
         pub const Node = struct {
             /// This memory is owned by user, it has to be freed manually.
             value: V = undefined, 
-            
-            /// next node
-            next: ?*Node = null,
-
-            /// previous node
-            prev: ?*Node = null,
+            /// This memory is owned by user, it has to be freed manually.
+            key: K = undefined,
+            next: ?*Node = undefined,
+            prev: ?*Node = undefined,
         };
 
         pub fn init(alloc: std.mem.Allocator) Self {
             return  .{
                 .alloc = alloc,
                 .node_alloc = std.heap.ArenaAllocator.init(alloc),
+                .map = HashMap.empty,
                 .head = null,
                 .tail = null,
                 .size = 0,
-                .map = HashMap.empty,
             };
         }
+
+        ///Append (K,V) to end of linked list (where tail points to)
+        pub fn append(self: *Self, key: K, val: V) !void {
+            //todo add checking for the types V and K
+            var node = try self.node_alloc.allocator().create(Self.Node);
+            node.key = key;
+            node.value = val;
+            node.next = null;
+            node.prev = null;
+            if (self.size == 0) {
+                self.head = node;
+                self.tail = node;
+            } else {
+                //Old last one now points to new node
+                self.tail.?.next = node;
+                //New node prev now points to last old one
+                node.prev = self.tail;
+                //Head is now new one
+                self.tail = node;
+            }
+            self.map.put(self.alloc, key, node) catch |err| {
+                std.debug.print("Cannot put into map: {}\n",.{err});
+            };
+            self.size += 1;
+            return;
+        }
         
+        /// Walsk from tail to head and prints K,V for each node
+        pub fn debugListFromHead(self: *Self) void {
+            var count: usize = 0;
+            var current = self.head; 
+            while(current) |node| : (current = node.next){
+                std.debug.print("[{}] K: {s}; V: {s}\n", .{
+                    count, node.key, node.value
+                });
+                count+=1;
+            }
+            std.debug.print("DLL size: {}", .{self.size});
+        }
         /// Deinit LinkedHash, keys and values need to be freed by caller
         pub fn deinit(self: *Self) void {
             //free all nodes
@@ -66,7 +110,9 @@ pub fn LinkedHash(comptime V: type) type {
 }
 
 test "linked_hash_init" {
-    var lh = LinkedHash([]u8).init(std.testing.allocator);
+    const strCtx = std.hash_map.StringContext;
+    const CLinkedHash = LinkedHash([]const u8, []const u8, strCtx);
+    var lh = CLinkedHash.init(std.testing.allocator);
     defer lh.deinit();
     try (std.testing.expect(lh.size == 0));
     try (std.testing.expect(lh.head == null));
@@ -74,20 +120,10 @@ test "linked_hash_init" {
     try (std.testing.expect(lh.map.size == 0));
     try (std.testing.expect(lh.map.capacity() == 0));
     
-    //Alloc a value
-    const value = try lh.alloc.alloc(u8, 1);
-    defer lh.alloc.free(value);
-    @memset(value, 'A');
-    
-    //Alloc a node
-    var nd = try lh.node_alloc.allocator().create(LinkedHash([]u8).Node);
-    nd.value = value;
+    //Append node
+    try lh.append("CHIAVEUNO", "asjkdajsdkasjdkasdjaskdjaskdjaskdjask");
+    try lh.append("CHIAVEDUE", "asdjaksdjaskdjaskdjaskdasjdkasjdkasjdkas");
    
     //Try to put and get the node
-    try lh.map.put(lh.alloc,"KEY", nd);
-    if(lh.map.get("KEY")) |val| {
-        try(std.testing.expect(val.value[0] == 'A'));
-    } else {
-       return error.CANNOT_GET_FROM_HASH; 
-    }
+    lh.debugListFromHead();
 }

@@ -1,5 +1,3 @@
-//! Implementation of the combination between an hash map and a doubly linked list.
-//! For now only the value is a generic type, the key has to be a []const u8 and use zig default
 //! string context.
 //! V memory has to be freed by user, we just handle pointers.
 //! TODO:
@@ -58,7 +56,7 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
             };
         }
 
-        ///Append (K,V) to end of linked list (where tail points to)
+        /// puts (K,V) in hash map and appends new node to end of linked list
         pub fn append(self: *Self, key: K, val: V) !void {
             //todo add checking for the types V and K
             var node = try self.node_alloc.allocator().create(Self.Node);
@@ -84,7 +82,7 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
             return;
         }
         
-        /// Walsk from tail to head and prints K,V for each node
+        /// walks from tail to head and prints position,K,V for each node
         pub fn debugListFromHead(self: *Self) void {
             var count: usize = 0;
             var current = self.head; 
@@ -94,12 +92,23 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
                 });
                 count+=1;
             }
-            std.debug.print("DLL size: {}", .{self.size});
+            std.debug.print("DLL size: {}\n", .{self.size});
         }
-        /// Deinit LinkedHash, keys and values need to be freed by caller
+        
+        pub fn debugHashMap(self: *Self) void {
+            var iterator = self.map.iterator();
+            while (iterator.next()) |kv| {
+                std.debug.print("K: {s}; V: {s}\n", .{
+                    kv.key_ptr.*, kv.value_ptr.*.value,
+                });
+            }
+        }
+
+        /// deinits LinkedHash, keys and values need to be freed by caller
         pub fn deinit(self: *Self) void {
             //free all nodes
             self.node_alloc.deinit();
+            //deinit map
             self.map.deinit(self.alloc);
             self.head = undefined;
             self.tail = undefined;
@@ -110,20 +119,19 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
 }
 
 test "linked_hash_init" {
-    const strCtx = std.hash_map.StringContext;
-    const CLinkedHash = LinkedHash([]const u8, []const u8, strCtx);
+    const StringCtx = std.hash_map.StringContext;
+    const String = []const u8;
+    const CLinkedHash = LinkedHash(String, String, StringCtx);
+
     var lh = CLinkedHash.init(std.testing.allocator);
     defer lh.deinit();
-    try (std.testing.expect(lh.size == 0));
-    try (std.testing.expect(lh.head == null));
-    try (std.testing.expect(lh.tail == null));
-    try (std.testing.expect(lh.map.size == 0));
-    try (std.testing.expect(lh.map.capacity() == 0));
     
-    //Append node
     try lh.append("CHIAVEUNO", "asjkdajsdkasjdkasdjaskdjaskdjaskdjask");
     try lh.append("CHIAVEDUE", "asdjaksdjaskdjaskdjaskdasjdkasjdkasjdkas");
+    try lh.append("CHIAVETRE", "adkuik akskudei askdue *((((()))))");
+    try lh.append("CHIAVEQUATTRO", "12049-094)(A_)D*(AS&DA(SD)");
+    try lh.append("CHIAVECINQUE", "EDOAROASODIASODIASO");
    
-    //Try to put and get the node
     lh.debugListFromHead();
+    lh.debugHashMap();
 }

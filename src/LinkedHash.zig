@@ -99,6 +99,7 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
         
         /// walks from tail to head and prints position,K,V for each node
         pub fn debugListFromHead(self: *Self) void {
+            std.debug.print("Walking linked list from tail to head...\n", .{});
             var count: usize = 0;
             var current = self.head; 
             while(current) |node| : (current = node.next){
@@ -109,7 +110,9 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
             }
         }
         
+        /// Prints all (K,V) pairs in hash map
         pub fn debugHashMap(self: *Self) void {
+            std.debug.print("Debug printing hash map pairs...\n", .{});
             var iterator = self.map.iterator();
             while (iterator.next()) |kv| {
                 std.debug.print("K: {s}; V: {s}\n", .{

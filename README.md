@@ -5,6 +5,8 @@ to manage and navigate command history for common shells like bash, zsh and fish
 
 Built using [libvaxis](https://github.com/rockorager/libvaxis) modern tui library.
 
+(Semantic versioning)[https://semver.org/]
+
 ## Optimizations
 1. Use linked list + hash map by hashing nodes
 2. Use simd instruction when parsing file

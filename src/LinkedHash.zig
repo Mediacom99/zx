@@ -41,6 +41,8 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
             value: V = undefined, 
             /// This memory is owned by user, it has to be freed manually.
             key: K = undefined,
+            ///Number of times node with same key added
+            count: usize = 1,
             next: ?*Node = undefined,
             prev: ?*Node = undefined,
         };
@@ -56,31 +58,41 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
             };
         }
 
-        /// puts (K,V) in hash map and appends new node to end of linked list
-        pub fn append(self: *Self, key: K, val: V) !void {
+        /// Puts (K,V) in hash map and appends new node to end of linked list.
+        /// If entry with same key is already present it will increment that node
+        /// counts field and set it as tail.
+        pub fn appendUniqueWithArena(self: *Self, key: K, value: V) !void {
             if (@sizeOf(K) == 0 or @sizeOf(V) == 0) {
                 @compileError("K or V sizes are zero");
             }
-            //todo add checking for the types V and K
+            if (self.map.contains(key)) {
+                //increment duplicate field 
+                //move to top of list
+                //no need to allocate
+                @panic("TO_IMPLEMENT");
+            }
             var node = try self.node_alloc.allocator().create(Self.Node);
             node.key = key;
-            node.value = val;
-            node.next = null;
-            node.prev = null;
+            node.value = value;
+            node.count = 1;
+            
+            try self.map.putNoClobber(self.alloc, key, node);
+
             if (self.size == 0) {
+                node.next = null;
+                node.prev = null;
                 self.head = node;
                 self.tail = node;
             } else {
-                //Old last one now points to new node
+                //Current tail next now points to new node
                 self.tail.?.next = node;
-                //New node prev now points to last old one
+                //New node prev now points to current tail
                 node.prev = self.tail;
-                //Head is now new one
+                //New node next points to null
+                node.next = null;
+                //Tail is new node
                 self.tail = node;
             }
-            self.map.put(self.alloc, key, node) catch |err| {
-                std.debug.print("Cannot put into map: {}\n",.{err});
-            };
             self.size += 1;
             return;
         }
@@ -91,7 +103,7 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
             var current = self.head; 
             while(current) |node| : (current = node.next){
                 std.debug.print("[{}] K: {s}; V: {s}\n", .{
-                    count, node.key, node.value
+                    node.count, node.key, node.value,
                 });
                 count+=1;
             }
@@ -128,10 +140,10 @@ test "linked_hash_init" {
     var lh = CLinkedHash.init(std.testing.allocator);
     defer lh.deinit();
     
-    try lh.append("CHIAVEUNO", "asjkdajsdkasjdkasdjaskdjaskdjaskdjask");
-    try lh.append("CHIAVEDUE", "asdjaksdjaskdjaskdjaskdasjdkasjdkasjdkas");
-    try lh.append("CHIAVETRE", "adkuik akskudei askdue *((((()))))");
-    try lh.append("CHIAVEQUATTRO", "12049-094)(A_)D*(AS&DA(SD)");
+    try lh.appendUniqueWithArena("CHIAVEUNO", "valore numero uno");
+    try lh.appendUniqueWithArena("CHIAVEDUE", "qualcosa anche da mettere qui");
+    try lh.appendUniqueWithArena("CHIAVETRE", "dai anche qua forse bozzolante");
+    try lh.appendUniqueWithArena("CHIAVEQUATTRO", "adkasdldadlad");
    
     std.debug.print("LinkedHash size: {}\n", .{lh.size});
     lh.debugListFromHead();

@@ -99,11 +99,11 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
         
         /// walks from tail to head and prints position,K,V for each node
         pub fn debugListFromHead(self: *Self) void {
-            std.debug.print("Walking linked list from tail to head...\n", .{});
+            const sl = log.scoped(.debugListFromHead);
             var count: usize = 0;
             var current = self.head; 
             while(current) |node| : (current = node.next){
-                std.debug.print("[{}] K: {s}; V: {s}\n", .{
+                sl.debug("[ {}, {s}, {s} ]", .{
                     node.count, node.key, node.value,
                 });
                 count+=1;
@@ -112,10 +112,10 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
         
         /// Prints all (K,V) pairs in hash map
         pub fn debugHashMap(self: *Self) void {
-            std.debug.print("Debug printing hash map pairs...\n", .{});
+            const fnlog = log.scoped(.debugHashMap);
             var iterator = self.map.iterator();
             while (iterator.next()) |kv| {
-                std.debug.print("K: {s}; V: {s}\n", .{
+                fnlog.debug("[ {s}, {s} ]", .{
                     kv.key_ptr.*, kv.value_ptr.*.value,
                 });
             }
@@ -139,6 +139,8 @@ test "linked_hash_init" {
     const StringCtx = std.hash_map.StringContext;
     const String = []const u8;
     const CLinkedHash = LinkedHash(String, String, StringCtx);
+    
+    std.testing.log_level = std.log.Level.debug;
 
     var lh = CLinkedHash.init(std.testing.allocator);
     defer lh.deinit();
@@ -148,7 +150,7 @@ test "linked_hash_init" {
     try lh.appendUniqueWithArena("CHIAVETRE", "dai anche qua forse bozzolante");
     try lh.appendUniqueWithArena("CHIAVEQUATTRO", "adkasdldadlad");
    
-    std.debug.print("LinkedHash size: {}\n", .{lh.size});
+    log.debug("LinkedHash size: {}", .{lh.size});
     lh.debugListFromHead();
     lh.debugHashMap();
 }

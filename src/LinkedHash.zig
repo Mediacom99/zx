@@ -58,26 +58,68 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
             };
         }
 
+        /// deinits LinkedHash, keys and values need to be freed by caller
+        pub fn deinit(self: *Self) void {
+            //free all nodes
+            self.node_alloc.deinit();
+            //deinit map
+            self.map.deinit(self.alloc);
+            self.head = undefined;
+            self.tail = undefined;
+            self.size = undefined;
+            self.* = undefined;
+        }
+
+
+        /// walks from tail to head and prints position,K,V for each node
+        pub fn printListFromHead(self: *Self) void {
+            var count: usize = 0;
+            var current = self.head; 
+            while(current) |node| : (current = node.next){
+               log.info("[ {}, {s}, {s} ]", .{
+                    node.count, node.key, node.value,
+                });
+                count+=1;
+            }
+        }
+        
+        /// Prints all (K,V) pairs in hash map
+        pub fn printHashMap(self: *Self) void {
+            var iterator = self.map.iterator();
+            while (iterator.next()) |kv| {
+                log.info("[ {s}, {s} ]", .{
+                    kv.key_ptr.*, kv.value_ptr.*.value,
+                });
+            }
+        }
+
         /// Puts (K,V) in hash map and appends new node to end of linked list.
-        /// If entry with same key is already present it will increment that node
-        /// counts field and set it as tail.
+        /// If entry with same key is already present it will increment that node's
+        /// count field and move it to end of list.
         pub fn appendUniqueWithArena(self: *Self, key: K, value: V) !void {
             if (@sizeOf(K) == 0 or @sizeOf(V) == 0) {
                 @compileError("K or V sizes are zero");
             }
             if (self.map.contains(key)) {
-                //increment duplicate field 
-                //move to top of list
-                //no need to allocate
-                @panic("TO_IMPLEMENT");
+                log.debug("Duplicate key found!", .{});
+                const dupe_node = self.map.get(key).?;
+                dupe_node.count+=1;
+                self.moveToEnd(dupe_node);
+                return;
             }
+            //New node
             var node = try self.node_alloc.allocator().create(Self.Node);
             node.key = key;
             node.value = value;
             node.count = 1;
-            
-            try self.map.putNoClobber(self.alloc, key, node);
-
+            try self.map.putNoClobber(self.alloc, node.key, node);
+            self.append(node);
+            self.size += 1;
+            return;
+        }
+        
+        ///Appends node to end of linked list, does not increase list size.
+        fn append(self: *Self, node: *Node) void {
             if (self.size == 0) {
                 node.next = null;
                 node.prev = null;
@@ -93,45 +135,40 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
                 //Tail is new node
                 self.tail = node;
             }
-            self.size += 1;
+            return;
+        }
+
+        ///Moves current node to end of linked list
+        fn moveToEnd(self: *Self, val: *Node) void {
+            if(val == self.tail) {
+                return; 
+            }
+            if (val == self.head) {
+                //quello dopo diventa head 
+                val.next.?.prev = null;
+                self.head = val.next;
+                //We move val to end
+                val.prev = self.tail;
+                self.tail.?.next = val;
+                val.next = null;
+                //set tail to val
+                self.tail = val;
+                return;
+            }
+            //Attacca quelli a dx e sx di val
+            val.prev.?.next = val.next;
+            val.next.?.prev = val.prev;
+
+            //attaco al current tail
+            self.tail.?.next = val;
+            val.prev = self.tail;
+            val.next = null;
+
+            //setto tail a val
+            self.tail = val;
             return;
         }
         
-        /// walks from tail to head and prints position,K,V for each node
-        pub fn debugListFromHead(self: *Self) void {
-            const sl = log.scoped(.debugListFromHead);
-            var count: usize = 0;
-            var current = self.head; 
-            while(current) |node| : (current = node.next){
-                sl.debug("[ {}, {s}, {s} ]", .{
-                    node.count, node.key, node.value,
-                });
-                count+=1;
-            }
-        }
-        
-        /// Prints all (K,V) pairs in hash map
-        pub fn debugHashMap(self: *Self) void {
-            const fnlog = log.scoped(.debugHashMap);
-            var iterator = self.map.iterator();
-            while (iterator.next()) |kv| {
-                fnlog.debug("[ {s}, {s} ]", .{
-                    kv.key_ptr.*, kv.value_ptr.*.value,
-                });
-            }
-        }
-
-        /// deinits LinkedHash, keys and values need to be freed by caller
-        pub fn deinit(self: *Self) void {
-            //free all nodes
-            self.node_alloc.deinit();
-            //deinit map
-            self.map.deinit(self.alloc);
-            self.head = undefined;
-            self.tail = undefined;
-            self.size = undefined;
-            self.* = undefined;
-        }
     };
 }
 
@@ -139,18 +176,43 @@ test "linked_hash_init" {
     const StringCtx = std.hash_map.StringContext;
     const String = []const u8;
     const CLinkedHash = LinkedHash(String, String, StringCtx);
-    
-    std.testing.log_level = std.log.Level.debug;
+
+    std.testing.log_level = std.log.Level.info;
 
     var lh = CLinkedHash.init(std.testing.allocator);
     defer lh.deinit();
     
-    try lh.appendUniqueWithArena("CHIAVEUNO", "valore numero uno");
+    try lh.appendUniqueWithArena("CHIAVEQUATTRO", "adkasdldadlad");
     try lh.appendUniqueWithArena("CHIAVEDUE", "qualcosa anche da mettere qui");
+    try lh.appendUniqueWithArena("ciao", "valore numero uno");
+    try lh.appendUniqueWithArena("ciao", "valore numero uno");
+    try lh.appendUniqueWithArena("CHIAVEDUE", "qualcosa anche da mettere qui");
+    try lh.appendUniqueWithArena("ciao", "valore numero uno");
+    try lh.appendUniqueWithArena("CHIAVEDUE", "qualcosa anche da mettere qui");
+    try lh.appendUniqueWithArena("CHIAVEDUE", "qualcosa anche da mettere qui");
+    try lh.appendUniqueWithArena("CHIAVEDUE", "qualcosa anche da mettere qui");
+    try lh.appendUniqueWithArena("CHIAVEDUE", "qualcosa anche da mettere qui");
+    try lh.appendUniqueWithArena("CHIAVEDUE", "qualcosa anche da mettere qui");
+    try lh.appendUniqueWithArena("CHIAVEDUE", "qualcosa anche da mettere qui");
+    try lh.appendUniqueWithArena("ciao", "valore numero uno");
+    try lh.appendUniqueWithArena("CHIAVETRE", "dai anche qua forse bozzolante");
+    try lh.appendUniqueWithArena("CHIAVETRE", "dai anche qua forse bozzolante");
+    try lh.appendUniqueWithArena("CHIAVETRE", "dai anche qua forse bozzolante");
+    try lh.appendUniqueWithArena("CHIAVEDUE", "qualcosa anche da mettere qui");
+    try lh.appendUniqueWithArena("ciao", "valore numero uno");
+    try lh.appendUniqueWithArena("CHIAVETRE", "dai anche qua forse bozzolante");
+    try lh.appendUniqueWithArena("CHIAVEQUATTRO", "adkasdldadlad");
+    try lh.appendUniqueWithArena("ciao", "valore numero uno");
+    try lh.appendUniqueWithArena("CHIAVETRE", "dai anche qua forse bozzolante");
+    try lh.appendUniqueWithArena("ciao", "valore numero uno");
+    try lh.appendUniqueWithArena("ciao", "valore numero uno");
+    try lh.appendUniqueWithArena("CHIAVETRE", "dai anche qua forse bozzolante");
+    try lh.appendUniqueWithArena("CHIAVETRE", "dai anche qua forse bozzolante");
+    try lh.appendUniqueWithArena("ciao", "valore numero uno");
     try lh.appendUniqueWithArena("CHIAVETRE", "dai anche qua forse bozzolante");
     try lh.appendUniqueWithArena("CHIAVEQUATTRO", "adkasdldadlad");
    
-    log.debug("LinkedHash size: {}", .{lh.size});
-    lh.debugListFromHead();
-    lh.debugHashMap();
+    log.info("LinkedHash size: {}", .{lh.size});
+    lh.printListFromHead();
+    lh.printHashMap();
 }

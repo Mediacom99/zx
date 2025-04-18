@@ -1,6 +1,6 @@
 const std = @import("std");
 const App = @import("App.zig");
-
+const History = @import("History.zig");
 
 pub fn main() !void {
     var args = std.process.args();
@@ -18,7 +18,10 @@ pub fn main() !void {
     }
 
     const allocator = gpa.allocator();
-    var app = try App.init(allocator, historyFilePath);
-    defer app.deinit();
-    app.history.debugPrint();
+    var arena = std.heap.ArenaAllocator.init(allocator);
+    defer arena.deinit();
+
+    var hist = try History.init(allocator, &arena, historyFilePath);
+    defer hist.deinit();
+    hist.store.printListFromHead();
 }

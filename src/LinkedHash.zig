@@ -1,8 +1,3 @@
-//! TODO:
-//!     1. Add capacity and ability to preallocate (and all the assumeCapacity functions)
-//!     2. Add support for custom contexts (like StringContext in std)
-//!     3. Add support for generic keys
-//!
 //! The structure is: head -> [Node 1, first added] <-> [Node 2] <-> ... <-> [Node N, last added] <- tail
 
 const std = @import("std");
@@ -19,7 +14,7 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
 
         ///Internal arena allocator to manage nodes
         ///Not good if node deallocation is frequent. 
-        node_alloc: std.heap.ArenaAllocator, 
+        node_alloc: *std.heap.ArenaAllocator, 
         
         /// Current head of linked list (most recent inserted)
         head: ?*Node = undefined,
@@ -47,10 +42,10 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
             prev: ?*Node = undefined,
         };
 
-        pub fn init(alloc: std.mem.Allocator) Self {
+        pub fn init(alloc: std.mem.Allocator, arena: *std.heap.ArenaAllocator) Self {
             return  .{
                 .alloc = alloc,
-                .node_alloc = std.heap.ArenaAllocator.init(alloc),
+                .node_alloc = arena,
                 .map = HashMap.empty,
                 .head = null,
                 .tail = null,
@@ -60,8 +55,6 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
 
         /// deinits LinkedHash, keys and values need to be freed by caller
         pub fn deinit(self: *Self) void {
-            //free all nodes
-            self.node_alloc.deinit();
             //deinit map
             self.map.deinit(self.alloc);
             self.head = undefined;
@@ -76,7 +69,7 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
             var count: usize = 0;
             var current = self.head; 
             while(current) |node| : (current = node.next){
-               log.info("[ {}, {s}, {s} ]", .{
+               log.info("[{}] {{ {s} }} {{ {s} }}", .{
                     node.count, node.key, node.value,
                 });
                 count+=1;
@@ -101,7 +94,7 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
                 @compileError("K or V sizes are zero");
             }
             if (self.map.contains(key)) {
-                log.debug("Duplicate key found!", .{});
+                // log.debug("Duplicate key found!", .{});
                 const dupe_node = self.map.get(key).?;
                 dupe_node.count+=1;
                 self.moveToEnd(dupe_node);
@@ -179,7 +172,9 @@ test "linked_hash_init" {
 
     std.testing.log_level = std.log.Level.info;
 
-    var lh = CLinkedHash.init(std.testing.allocator);
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    var lh = CLinkedHash.init(std.testing.allocator, &arena);
     defer lh.deinit();
     
     try lh.appendUniqueWithArena("CHIAVEQUATTRO", "adkasdldadlad");

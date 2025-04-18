@@ -8,6 +8,7 @@ Built using [libvaxis](https://github.com/rockorager/libvaxis) modern tui librar
 (Semantic versioning)[https://semver.org/]
 
 ## Optimizations
+0. We only allocate the history file, we hash indices of start/end command
 1. Use linked list + hash map by hashing nodes
 2. Use simd instruction when parsing file
 3. use stack instead of heap for small file sizes (< 4KB)

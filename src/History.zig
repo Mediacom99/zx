@@ -1,4 +1,6 @@
-//! History service handles loading history data from different shells.
+//! History service handles loading history data from different shells. It's the middleman
+//! between the App instance and the backing store (LinkedHash and/or whatever else) that actually
+//! handles parsing and loading the data into memory with the appropriate data structures.
 
 const Self = @This();
 const std = @import("std");
@@ -9,10 +11,10 @@ const LinkedHash = linked_hash.LinkedHash([]const u8, []const u8, std.hash_map.S
 const Allocator = std.mem.Allocator;
 
 ///max non-space bytes hashed to create the key
-const keySize: usize = 255;
+const key_size: usize = 255;
 
 //Used to prealloacate space for hash maps
-const bytesPerLine: usize = 32;
+const bytes_per_line: usize = 32;
 
 file_path: []const u8 = undefined,
 
@@ -64,24 +66,25 @@ fn parseFile(self: *Self, path: []const u8) !void {
     utils.sanitizeAscii(&content);
 
     //FIXME need this?
-    const contentTrimmed = std.mem.trim(u8, content.items, "\n"); 
-    var iter = std.mem.splitScalar(u8, contentTrimmed, '\n');
+    const content_trimmed = std.mem.trim(u8, content.items, "\n"); 
+
+    var iter = std.mem.splitScalar(u8, content_trimmed, '\n');
     while(iter.next()) |cmd| {
         //the key is the first KEY_SIZE bytes of cmd that are not spaces
-        var keyBuf: [keySize]u8 = undefined;
+        var key_buf: [key_size]u8 = undefined;
         var key_len: usize = 0;
-        for (0..keySize) |i| {
+        for (0..key_size) |i| {
             if (i == cmd.len) break;
             if (cmd[i] != ' '){ 
-                keyBuf[key_len] = cmd[i];
+                key_buf[key_len] = cmd[i];
                 key_len+=1;
             }
         }
         if (key_len == 0) continue;
         const arena_alloc = self.arena.allocator();
-        const cmdTrimmed = std.mem.trim(u8, cmd, " "); 
-        const cmdPtr = try arena_alloc.dupe(u8, cmdTrimmed);
-        const keyPtr = try arena_alloc.dupe(u8, keyBuf[0..key_len]);
-        try self.store.appendUniqueWithArena(keyPtr, cmdPtr);
+        const cmd_trimmed = std.mem.trim(u8, cmd, " "); 
+        const cmd_ptr = try arena_alloc.dupe(u8, cmd_trimmed);
+        const key_ptr = try arena_alloc.dupe(u8, key_buf[0..key_len]);
+        try self.store.appendUniqueWithArena(key_ptr, cmd_ptr);
     }
 }

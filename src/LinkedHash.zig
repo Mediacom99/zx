@@ -1,3 +1,5 @@
+//! LinkedHash is the combination between a doubly linked list and a hash map. Every node 
+//! in the doubly linked list is also hashed for O(1) retrieval.
 //! The structure is: head -> [Node 1, first added] <-> [Node 2] <-> ... <-> [Node N, last added] <- tail
 
 const std = @import("std");

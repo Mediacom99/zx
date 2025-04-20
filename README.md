@@ -7,7 +7,10 @@ Built using [libvaxis](https://github.com/rockorager/libvaxis) modern tui librar
 
 (Semantic versioning)[https://semver.org/]
 
+[Finite state machine for string representation](https://burntsushi.net/transducers/#fsa-construction)
+
 ## Optimizations
+0. Use mmap syscall to directly map file into memory (std.posix.mmap)
 0. We only allocate the history file, we hash indices of start/end command
 1. Use linked list + hash map by hashing nodes
 2. Use simd instruction when parsing file

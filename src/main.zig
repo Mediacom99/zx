@@ -6,7 +6,7 @@ pub fn main() !void {
     var args = std.process.args();
     _ = args.skip();
     const historyFilePath = args.next() orelse {
-         return error.InvalidHistoryFilePath;
+         return History.HistoryError.InvalidFilePath;
     };
 
     var gpa = std.heap.DebugAllocator(.{}).init;

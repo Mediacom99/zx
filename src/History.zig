@@ -4,6 +4,8 @@
 
 const Self = @This();
 const std = @import("std");
+const assert = std.debug.assert;
+const builtin = @import("builtin");
 const log = std.log;
 const utils = @import("utils.zig");
 const linked_hash = @import("LinkedHash.zig");
@@ -24,15 +26,27 @@ alloc: Allocator,
 
 arena: *std.heap.ArenaAllocator,
 
+pub const HistoryError = error {
+    InvalidFilePath,
+    EmptyHistoryFile,
+    FailedParse,
+};
+
 /// Initialize History Service with given history file
-pub fn init(alloc: Allocator, arena: *std.heap.ArenaAllocator, histfile_path: []const u8) !Self {
+pub fn init(alloc: Allocator, arena: *std.heap.ArenaAllocator, histfile_path: []const u8) HistoryError!Self {
     var newSelf = Self{
         .file_path = histfile_path,
         .alloc = alloc,
         .arena = arena,
         .store = LinkedHash.init(alloc, arena),
     };
-    try newSelf.parseFile(histfile_path);
+    newSelf.parseFile(histfile_path) catch |err| switch(err) {
+        HistoryError.EmptyHistoryFile => return HistoryError.EmptyHistoryFile,
+        else => {
+            log.debug("Failed to parse file: {}", .{err});
+            return HistoryError.FailedParse;
+        }
+    };
     return newSelf;
 }
 
@@ -50,23 +64,46 @@ fn parseFile(self: *Self, path: []const u8) !void {
         file = try std.fs.cwd().openFile(path, .{});
     }
     defer file.close();
-
-
-    //TODO use stack for common bash history file size, heap otherwise
-    const end_pos = try file.getEndPos();
-    var content = try std.ArrayList(u8).initCapacity(self.alloc, end_pos);
-    defer content.deinit();
-    try content.resize(end_pos);
-
-    const bytes_read = try file.readAll(content.items);
-    log.debug("history file loaded, bytes read: {d}", .{bytes_read});
-    if (bytes_read <= 0) {
-        return error.EmptyHistoryFile;
+    
+    const md = try file.metadata();
+    const size = md.size();
+    if (size == 0) {
+        return HistoryError.EmptyHistoryFile;
     }
-    utils.sanitizeAscii(&content);
+    var content: []u8 = undefined;
+    if(builtin.target.os.tag == .linux) {
+        content = try std.posix.mmap(
+            null,
+            size, 
+            std.posix.PROT.READ | std.posix.PROT.WRITE,
+            .{.TYPE = .PRIVATE},
+            file.handle,
+            0
+        );
+        if (content.len == 0) {
+            return HistoryError.EmptyHistoryFile;
+        }
+        log.debug("Bytes mmapped to virtual mem: {}", .{content.len});
+    } else {
+        content = try self.alloc.alloc(u8, size);
+        const bytes_read = try file.readAll(content);
+        if (bytes_read == 0) {
+            return HistoryError.FailedParse;
+        }
+        log.debug("history file loaded, bytes read: {d}", .{bytes_read});
+    }
+    defer {
+        if (builtin.target.os.tag == .linux) {
+            std.posix.munmap(@alignCast(content));
+        } else {
+            self.alloc.free(content);
+        }
+    }
+    assert(content.len == size);
+    utils.sanitizeAscii(content);
 
     //FIXME need this?
-    const content_trimmed = std.mem.trim(u8, content.items, "\n"); 
+    const content_trimmed = std.mem.trim(u8, content, "\n"); 
 
     var iter = std.mem.splitScalar(u8, content_trimmed, '\n');
     while(iter.next()) |cmd| {

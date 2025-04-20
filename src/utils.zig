@@ -15,15 +15,14 @@ inline fn shouldRemove(item: u8) bool {
 }
 
 //TODO escape control/special chars ($, ...)
-pub fn sanitizeAscii(input: *std.ArrayList(u8)) void {
+pub fn sanitizeAscii(input: []u8) void {
     var src: usize = 0;
     var dst: usize = 0;
-    const items = input.items;
-    while (src < items.len): (src += 1) {
-        if (!shouldRemove(items[src])) {
-            items[dst] = items[src];
+    while (src < input.len): (src += 1) {
+        if (!shouldRemove(input[src])) {
+            input[dst] = input[src];
             dst+=1;
         }
     }
-    input.shrinkRetainingCapacity(dst); //bulk free
+    return;
 }

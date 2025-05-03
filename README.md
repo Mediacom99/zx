@@ -1,5 +1,4 @@
 # Zhist
-
 This project is a lightweight and vim-like tui application designed 
 to manage and navigate command history for common shells like bash, zsh and fish.
 
@@ -9,29 +8,25 @@ Built using [libvaxis](https://github.com/rockorager/libvaxis) modern tui librar
 
 [Finite state machine for string representation](https://burntsushi.net/transducers/#fsa-construction)
 
+## TODO
+[ ] Unbuffered IO / syscall overhead (fix)
+
 ## Optimizations
-0. Use mmap syscall to directly map file into memory (std.posix.mmap)
-0. We only allocate the history file, we hash indices of start/end command
-1. Use linked list + hash map by hashing nodes
-2. Use simd instruction when parsing file
-3. use stack instead of heap for small file sizes (< 4KB)
-4. Use simd instruction for sanitize ascii and key generation
-5. New hash function, optimize hash operations
-6. Unbuffered IO / syscall overhead (fix)
+[x] Use mmap syscall to directly map file into memory (std.posix.mmap)
+[ ] hashing indices of start/end command instead of copying command
+[x] Use linked list + hash map by hashing nodes
+[ ] Use simd instruction when parsing file
+[ ] use stack instead of heap for small file sizes (< 4KB)
 
 ## Supported shells
-
 - [X] bash
     - history is read from bash history file and refreshed using `history` command.
         (or maybe directly from history output)
       Another option is to use libreadline.
-- [ ] zsh
+- [x] zsh
 - [ ] fish
 
 ## Next steps
-- [x] read and parse bash history file into data structure
-- [x] clean input
-- [x] remove duplicates, keep only last command and add number of duplicates
 - [ ] display history entries in scrollable list
 - [ ] history navigation with vim-keys
 - [ ] execute selected command

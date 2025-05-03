@@ -1,5 +1,5 @@
 const std = @import("std");
-const Service = @import("App.zig");
+const Ui = @import("Ui.zig");
 const History = @import("History.zig");
 const vaxis = @import("vaxis");
 const vxfw = vaxis.vxfw;
@@ -35,29 +35,34 @@ pub fn main() !void {
 
     var gpa = std.heap.DebugAllocator(.{}).init;
     defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
-    // var arena = std.heap.ArenaAllocator.init(allocator);
-    // defer arena.deinit();
 
+    const allocator = gpa.allocator();
     var app = try vxfw.App.init(allocator);
     errdefer app.deinit();
 
-    const service = try allocator.create(Service);
-    defer allocator.destroy(service);
+    const ui = try allocator.create(Ui);
+    defer allocator.destroy(ui);
 
-    service.history = try History.init(allocator, hist_file_path);
-    defer service.history.deinit();
+    ui.history = try History.init(allocator, hist_file_path);
+    defer ui.history.deinit();
 
-    service.text_field = .{
+    const Color = vaxis.Cell.Color;
+    const gruber_yellow: Color = .{ .rgb =  [_]u8{255, 221, 51} };
+    ui.text = .{
+        .text = "Welcome to Zhist!",
+        .text_align = .center,
+        .style = .{ .fg = gruber_yellow },
+    };
+    ui.text_field = .{
         .buf = vxfw.TextField.Buffer.init(allocator),
         .unicode = &app.vx.unicode,
-        .userdata = service, 
-        .onChange = Service.onChange,
-        .onSubmit = Service.onSubmit,
+        .userdata = ui, 
+        .onChange = Ui.onChange,
+        .onSubmit = Ui.onSubmit,
     };
-    defer service.text_field.deinit();
+    defer ui.text_field.deinit();
 
-    try app.run(service.widget(), .{});
-    app.deinit();
+    try app.run(ui.widget(), .{});
+    defer app.deinit();
 }
 

@@ -1,8 +1,8 @@
-dbuild: 
+build: 
 	zig build 
 
-drun: dbuild
-	./zig-out/bin/zhist ~/.histfile
+drun: build
+	./zig-out/bin/zhist ./assets/histfile
 
 test: 
 	zig build test-lh --summary all

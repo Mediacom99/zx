@@ -1,5 +1,4 @@
-//! LinkedHash is the combination between a doubly linked list and a hash map. Every node 
-//! in the doubly linked list is also hashed for O(1) retrieval.
+//! LinkedHash is the combination between a doubly linked list and a hash map. Every node in the doubly linked list is also hashed for O(1) retrieval.
 //! The structure is: head -> [Node 1, first added] <-> [Node 2] <-> ... <-> [Node N, last added] <- tail
 
 const std = @import("std");
@@ -16,7 +15,7 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
 
         ///Internal arena allocator to manage nodes
         ///Not good if node deallocation is frequent. 
-        node_alloc: *std.heap.ArenaAllocator, 
+        node_alloc: std.heap.ArenaAllocator, 
         
         /// Current head of linked list (most recent inserted)
         head: ?*Node = undefined,
@@ -44,10 +43,10 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
             prev: ?*Node = undefined,
         };
 
-        pub fn init(alloc: std.mem.Allocator, arena: *std.heap.ArenaAllocator) Self {
+        pub fn init(alloc: std.mem.Allocator) Self {
             return  .{
                 .alloc = alloc,
-                .node_alloc = arena,
+                .node_alloc = std.heap.ArenaAllocator.init(alloc),
                 .map = HashMap.empty,
                 .head = null,
                 .tail = null,
@@ -59,6 +58,7 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
         pub fn deinit(self: *Self) void {
             //deinit map
             self.map.deinit(self.alloc);
+            self.node_alloc.deinit();
             self.head = undefined;
             self.tail = undefined;
             self.size = undefined;
@@ -113,7 +113,7 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
             return;
         }
         
-        ///Appends node to end of linked list, does not increase list size.
+        ///Appends node to end of linked list
         fn append(self: *Self, node: *Node) void {
             if (self.size == 0) {
                 node.next = null;
@@ -130,6 +130,7 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
                 //Tail is new node
                 self.tail = node;
             }
+            self.size += 1;
             return;
         }
 

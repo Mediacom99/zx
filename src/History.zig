@@ -24,27 +24,27 @@ store: LinkedHash = undefined,
 
 alloc: Allocator,
 
-arena: *std.heap.ArenaAllocator,
+arena: std.heap.ArenaAllocator,
 
 pub const HistoryError = error {
     InvalidFilePath,
     EmptyHistoryFile,
-    FailedParse,
+    FailedToParseFile,
 };
 
 /// Initialize History Service with given history file
-pub fn init(alloc: Allocator, arena: *std.heap.ArenaAllocator, histfile_path: []const u8) HistoryError!Self {
+pub fn init(alloc: Allocator, histfile_path: []const u8) HistoryError!Self {
     var newSelf = Self{
         .file_path = histfile_path,
         .alloc = alloc,
-        .arena = arena,
-        .store = LinkedHash.init(alloc, arena),
+        .arena = std.heap.ArenaAllocator.init(alloc),
+        .store = LinkedHash.init(alloc),
     };
     newSelf.parseFile(histfile_path) catch |err| switch(err) {
         HistoryError.EmptyHistoryFile => return HistoryError.EmptyHistoryFile,
         else => {
             log.debug("Failed to parse file: {}", .{err});
-            return HistoryError.FailedParse;
+            return HistoryError.FailedToParseFile;
         }
     };
     return newSelf;
@@ -52,6 +52,7 @@ pub fn init(alloc: Allocator, arena: *std.heap.ArenaAllocator, histfile_path: []
 
 pub fn deinit(self: *Self) void {
     self.store.deinit();
+    self.arena.deinit();
     return;
 }
 

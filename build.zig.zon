@@ -34,11 +34,11 @@
     // `zig build --fetch` can be used to fetch all dependencies of a package, recursively.
     // Once all dependencies are fetched, `zig build` no longer requires
     // internet connectivity.
-   .dependencies = .{
+    .dependencies = .{
         .vaxis = .{
             // the url to the release of the module
-            .url = "https://github.com/Mediacom99/libvaxis/archive/refs/tags/0.0.1.tar.gz",
-            .hash = "12206c91942c9e5ce1e86a321d20e03a2e356c2a19201da95be13b0b266eb4c79c22",
+            .url = "git+https://github.com/rockorager/libvaxis.git#72da2e05db487f2830e9c37cd64713473422227c",
+            .hash = "vaxis-0.1.0-BWNV_MkMCQC5L6gqogtruEXEgj4jyZjpvqHzJ_44-UA7",
         },
     },
     .paths = .{

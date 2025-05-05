@@ -1,7 +1,13 @@
 build: 
-	zig build 
+	zig build --summary all
 
-drun: build
+build-release:
+	zig build --release=fast
+
+run: build
+	./zig-out/bin/zhist ./assets/histfile	
+
+run-release: build-release
 	./zig-out/bin/zhist ./assets/histfile
 
 test: 
@@ -9,5 +15,3 @@ test:
 
 clean:
 	rm -r ./zig-out
-
-

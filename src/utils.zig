@@ -15,14 +15,14 @@ inline fn shouldRemove(item: u8) bool {
 }
 
 //TODO escape control/special chars ($, ...)
-pub fn sanitizeAscii(input: []u8) void {
-    var src: usize = 0;
-    var dst: usize = 0;
-    while (src < input.len): (src += 1) {
-        if (!shouldRemove(input[src])) {
-            input[dst] = input[src];
-            dst+=1;
+pub fn sanitizeAscii(input: []u8) usize {
+    var src_idx: usize = 0;
+    var dest_idx: usize = 0;
+    while (src_idx < input.len): (src_idx += 1) {
+        if (!shouldRemove(input[src_idx])) {
+            input[dest_idx] = input[src_idx];
+            dest_idx+=1;
         }
     }
-    return;
+    return dest_idx;
 }

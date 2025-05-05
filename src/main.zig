@@ -4,65 +4,60 @@ const History = @import("History.zig");
 const vaxis = @import("vaxis");
 const vxfw = vaxis.vxfw;
 
-// pub fn main() !void {
-//     var args = std.process.args();
-//     _ = args.skip();
-//     const historyFilePath = args.next() orelse {
-//          return History.HistoryError.InvalidFilePath;
-//     };
-//
-//     var gpa = std.heap.DebugAllocator(.{}).init;
-//     defer {
-//         const leaked = gpa.deinit();
-//         if (leaked != std.heap.Check.ok) {
-//             std.log.err("Memory leak detected!\n", .{});
-//         }
-//     }
-//
-//     const allocator = gpa.allocator();
-//     var hist = try History.init(allocator, historyFilePath);
-//     defer hist.deinit();
-//     hist.store.printListFromHead();
-// }
-
-
 pub fn main() !void {
     var args = std.process.args();
     _ = args.skip();
     const hist_file_path = args.next() orelse {
          return History.HistoryError.InvalidFilePath;
     };
-
     var gpa = std.heap.DebugAllocator(.{}).init;
     defer _ = gpa.deinit();
-
     const allocator = gpa.allocator();
-    var app = try vxfw.App.init(allocator);
-    errdefer app.deinit();
 
-    const ui = try allocator.create(Ui);
-    defer allocator.destroy(ui);
+    // var arena = std.heap.ArenaAllocator.init(allocator);
+    // defer arena.deinit();
 
-    ui.history = try History.init(allocator, hist_file_path);
-    defer ui.history.deinit();
+    var history = try History.init(allocator, hist_file_path);
+    defer history.deinit();
 
-    const Color = vaxis.Cell.Color;
-    const gruber_yellow: Color = .{ .rgb =  [_]u8{255, 221, 51} };
-    ui.text = .{
-        .text = "Welcome to Zhist!",
-        .text_align = .center,
-        .style = .{ .fg = gruber_yellow },
-    };
-    ui.text_field = .{
-        .buf = vxfw.TextField.Buffer.init(allocator),
-        .unicode = &app.vx.unicode,
-        .userdata = ui, 
-        .onChange = Ui.onChange,
-        .onSubmit = Ui.onSubmit,
-    };
-    defer ui.text_field.deinit();
+    history.store.printListFromHead();
 
-    try app.run(ui.widget(), .{});
-    defer app.deinit();
+    // var app = try vxfw.App.init(allocator);
+    // const ui = try allocator.create(Ui);
+    // defer allocator.destroy(ui);
+
+
+   //  const Color = vaxis.Cell.Color;
+   //  const gruber_yellow: Color = .{ .rgb =  [_]u8{255, 221, 51} };
+   //  ui.allocator = allocator;
+   //  ui.arena = std.heap.ArenaAllocator.init(allocator); //FIXME
+   //  ui.filtered = std.ArrayList(vxfw.RichText).init(allocator);
+   //  ui.text = .{
+   //      .text = "Welcome to Zhist!",
+   //      .width_basis = .parent,
+   //      .text_align = .center,
+   //      .style = .{ .fg = gruber_yellow },
+   //  };
+   //  ui.text_field = .{
+   //      .buf = vxfw.TextField.Buffer.init(allocator),
+   //      .unicode = &app.vx.unicode,
+   //      .userdata = ui, 
+   //      .onChange = Ui.textFieldOnChange,
+   //      .onSubmit = Ui.textFieldOnSubmit,
+   //  };
+   // ui.list_view = .{
+   //      .children = .{ 
+   //          .builder = .{
+   //              .userdata = ui,
+   //              .buildFn = Ui.listViewWidgetBuilder,
+   //          },   
+   //      },
+   //  };
+   //  defer ui.text_field.deinit();
+   //  defer ui.filtered.deinit();
+   //  defer ui.arena.deinit();
+   //
+   //  try app.run(ui.widget(), .{});
+   //  defer app.deinit();
 }
 

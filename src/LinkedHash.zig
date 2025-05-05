@@ -13,10 +13,8 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
         ///TODO Do we need this ?
         alloc: std.mem.Allocator,
 
-        ///Internal arena allocator to manage nodes
-        ///Not good if node deallocation is frequent. 
-        node_alloc: std.heap.ArenaAllocator, 
-        
+        arena: std.heap.ArenaAllocator,
+
         /// Current head of linked list (most recent inserted)
         head: ?*Node = undefined,
         
@@ -46,7 +44,7 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
         pub fn init(alloc: std.mem.Allocator) Self {
             return  .{
                 .alloc = alloc,
-                .node_alloc = std.heap.ArenaAllocator.init(alloc),
+                .arena = std.heap.ArenaAllocator.init(alloc),
                 .map = HashMap.empty,
                 .head = null,
                 .tail = null,
@@ -58,7 +56,7 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
         pub fn deinit(self: *Self) void {
             //deinit map
             self.map.deinit(self.alloc);
-            self.node_alloc.deinit();
+            self.arena.deinit();
             self.head = undefined;
             self.tail = undefined;
             self.size = undefined;
@@ -103,7 +101,8 @@ pub fn LinkedHash(comptime K: type, comptime V: type, comptime Context: type) ty
                 return;
             }
             //New node
-            var node = try self.node_alloc.allocator().create(Self.Node);
+            const arena_alloc = self.arena.allocator();
+            var node = try arena_alloc.create(Self.Node);
             node.key = key;
             node.value = value;
             node.count = 1;
@@ -177,7 +176,7 @@ test "linked_hash_init" {
 
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
-    var lh = CLinkedHash.init(std.testing.allocator, &arena);
+    var lh = CLinkedHash.init(std.testing.allocator);
     defer lh.deinit();
     
     try lh.appendUniqueWithArena("CHIAVEQUATTRO", "adkasdldadlad");

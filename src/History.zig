@@ -9,7 +9,7 @@ const builtin = @import("builtin");
 const log = std.log;
 const utils = @import("utils.zig");
 const linked_hash = @import("LinkedHash.zig");
-const LinkedHash = linked_hash.LinkedHash([]const u8, []const u8, std.hash_map.StringContext);
+pub const LinkedHash = linked_hash.LinkedHash([]const u8, []const u8, std.hash_map.StringContext);
 const Allocator = std.mem.Allocator;
 
 ///max non-space bytes hashed to create the key
@@ -71,9 +71,9 @@ fn parseFile(self: *Self, path: []const u8) !void {
     if (size == 0) {
         return HistoryError.EmptyHistoryFile;
     }
-    var content: []u8 = undefined;
+    var raw_content: []u8 = undefined;
     if(builtin.target.os.tag == .linux) {
-        content = try std.posix.mmap(
+        raw_content = try std.posix.mmap(
             null,
             size, 
             std.posix.PROT.READ | std.posix.PROT.WRITE,
@@ -81,30 +81,30 @@ fn parseFile(self: *Self, path: []const u8) !void {
             file.handle,
             0
         );
-        if (content.len == 0) {
+        if (raw_content.len == 0) {
             return HistoryError.EmptyHistoryFile;
         }
-        log.debug("Bytes mmapped to virtual mem: {}", .{content.len});
+        log.debug("Bytes mmapped to virtual mem: {}", .{raw_content.len});
     } else {
-        content = try self.alloc.alloc(u8, size);
-        const bytes_read = try file.readAll(content);
+        raw_content = try self.alloc.alloc(u8, size);
+        const bytes_read = try file.readAll(raw_content);
         if (bytes_read == 0) {
-            return HistoryError.FailedParse;
+            return HistoryError.FailedToParseFile;
         }
         log.debug("history file loaded, bytes read: {d}", .{bytes_read});
     }
     defer {
         if (builtin.target.os.tag == .linux) {
-            std.posix.munmap(@alignCast(content));
+            std.posix.munmap(@alignCast(raw_content));
         } else {
-            self.alloc.free(content);
+           self.alloc.free(raw_content);
         }
     }
-    assert(content.len == size);
-    utils.sanitizeAscii(content);
+    assert(raw_content.len == size);
+    const new_size = utils.sanitizeAscii(raw_content);
 
     //FIXME need this?
-    const content_trimmed = std.mem.trim(u8, content, "\n"); 
+    const content_trimmed = std.mem.trim(u8, raw_content[0..new_size], "\n"); 
 
     var iter = std.mem.splitScalar(u8, content_trimmed, '\n');
     while(iter.next()) |cmd| {
@@ -119,8 +119,8 @@ fn parseFile(self: *Self, path: []const u8) !void {
             }
         }
         if (key_len == 0) continue;
-        const arena_alloc = self.arena.allocator();
         const cmd_trimmed = std.mem.trim(u8, cmd, " "); 
+        const arena_alloc = self.arena.allocator();
         const cmd_ptr = try arena_alloc.dupe(u8, cmd_trimmed);
         const key_ptr = try arena_alloc.dupe(u8, key_buf[0..key_len]);
         try self.store.appendUniqueWithArena(key_ptr, cmd_ptr);

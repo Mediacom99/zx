@@ -2,8 +2,7 @@ text_field: vxfw.TextField,
 list_view: vxfw.ListView,
 text: vxfw.Text,
 history: History,
-filtered: std.ArrayList(vxfw.RichText), //FIXME dont need arraylist
-allocator: std.mem.Allocator,
+list_items: std.ArrayList(vxfw.RichText),
 arena: std.heap.ArenaAllocator,
 
 pub fn widget(self: *Self) vxfw.Widget {
@@ -14,20 +13,19 @@ pub fn widget(self: *Self) vxfw.Widget {
     };
 }
 
-
 fn typeErasedEventHandler(ptr: *anyopaque, ctx: *vxfw.EventContext,
 event: vxfw.Event) anyerror!void {
     const self: *Self = @ptrCast(@alignCast(ptr));
     switch(event) {
         .init => {
-            // Initialize the filtered list
+            //Allocate enough RichText for all items in list
             const allocator = self.arena.allocator();
-            var temp = self.history.store.tail;
+            var temp = self.history.list.last;
+            log.debug("Commands: {d}", .{self.history.list.len});
             while (temp) |node| {
-                var spans = try allocator.alloc(vxfw.RichText.TextSpan, 1);
-                spans[0] = .{ .text = node.value };
-                const rich_text: vxfw.RichText =.{ .text = spans, .text_align = .left };
-                try self.filtered.append(rich_text);
+                var spans = std.ArrayList(vxfw.RichText.TextSpan).init(allocator);
+                try spans.append(.{.text = node.data.cmd, .style = .{.bold = true}});
+                try self.list_items.append(.{.text = spans.items, .text_align = .left});
                 temp = node.prev;
             }
             try self.text_field.insertSliceAtCursor("> ");
@@ -102,19 +100,14 @@ pub fn textFieldOnSubmit(maybe_ptr: ?*anyopaque, _: *vxfw.EventContext, _: []con
 // This is only used in relation to ListView
 pub fn listViewWidgetBuilder(ptr: *const anyopaque, idx: usize, _: usize) ?vxfw.Widget {
     const self: *const Self = @ptrCast(@alignCast(ptr));
-    if (idx >= self.filtered.items.len) return null;
-    return self.filtered.items[idx].widget();
+    if (idx >= self.history.list.len) return null;
+    return self.list_items.items[idx].widget();
 }
 
-pub fn deinit(self: *Self) void {
-    self.arena.deinit();
-}
-
-const LinkedHash = @import("LinkedHash.zig");
 const std = @import("std");
+const log = std.log;
 const vaxis = @import("vaxis");
 const vxfw = vaxis.vxfw;
 const Self = @This();
 const Allocator = std.mem.Allocator;
 const History = @import("History.zig");
-

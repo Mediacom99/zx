@@ -1,13 +1,16 @@
-//! Bunch of utility functions
+//! Some useful functions
 
 const std = @import("std");
 
+const START_ASCII = 0x1F;
+const END_ASCII = 0x7F;
+
 inline fn isNonPrintableAscii(item: u8) bool {
-    return item <= 0x1f;
+    return item <= START_ASCII;
 }
 
 inline fn isExtendedAscii(item: u8) bool {
-    return item >= 0x7f;
+    return item >= END_ASCII;
 }
 
 inline fn shouldRemove(item: u8) bool {

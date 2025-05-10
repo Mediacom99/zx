@@ -4,6 +4,7 @@ text: vxfw.Text,
 history: History,
 list_items: std.ArrayList(vxfw.RichText),
 arena: std.heap.ArenaAllocator,
+selected: std.ArrayList([]const u8),
 
 pub fn widget(self: *Self) vxfw.Widget {
     return .{
@@ -18,28 +19,42 @@ event: vxfw.Event) anyerror!void {
     const self: *Self = @ptrCast(@alignCast(ptr));
     switch(event) {
         .init => {
-            //Allocate enough RichText for all items in list
+            //Text field
+            try self.text_field.insertSliceAtCursor("> ");
+
+            //List view
             const allocator = self.arena.allocator();
             var temp = self.history.list.last;
             log.debug("Commands: {d}", .{self.history.list.len});
             while (temp) |node| {
                 var spans = std.ArrayList(vxfw.RichText.TextSpan).init(allocator);
-                try spans.append(.{.text = node.data.cmd, .style = .{.bold = true}});
-                try self.list_items.append(.{.text = spans.items, .text_align = .left});
+                const text_span: vxfw.RichText.TextSpan = .{
+                    .text = node.data.cmd, 
+                    .style = .{.bold = false}
+                };
+                try spans.append(text_span);
+                const rich_text: vxfw.RichText = .{
+                    .text = spans.items, 
+                    .text_align = .left
+                };
+                try self.list_items.append(rich_text);
                 temp = node.prev;
             }
-            try self.text_field.insertSliceAtCursor("> ");
-            return ctx.requestFocus(self.text_field.widget());
+
+            return ctx.requestFocus(self.list_view.widget());
         },
         .key_press => |key| {
             if (key.matches('c', .{ .ctrl = true })) {
                 ctx.quit = true;
                 return;
             }
-            //We handle the event somewhere else, we need only event and ctx
+            if (key.matches('/', .{})) {
+                return ctx.requestFocus(self.text_field.widget());
+            }
+            return self.list_view.handleEvent(ctx, event);
         },
         .focus_in => {
-            return ctx.requestFocus(self.text_field.widget());
+            return ctx.requestFocus(self.list_view.widget());
         },
         else => {},
     }
@@ -48,26 +63,22 @@ event: vxfw.Event) anyerror!void {
 fn typeErasedDrawFn(ptr: *anyopaque, ctx: vxfw.DrawContext) Allocator.Error!vxfw.Surface {
     const self: *Self = @ptrCast(@alignCast(ptr));
     const max = ctx.max.size();
-
     const text: vxfw.SubSurface = .{
         .origin = .{ .row = 1, .col = 0},
         .surface = try self.text.draw(ctx.withConstraints(ctx.min, .{ .width = max.width, .height = 1})),
     };
-
     const text_field: vxfw.SubSurface = .{
         .origin = .{ .row = max.height - 2, .col = 2},
         .surface = try self.text_field.draw(ctx.withConstraints(
             ctx.min, .{ .width = 100, .height = 1},
         )),
     };
-
     const list_view: vxfw.SubSurface = .{
         .origin = .{ .row = 5, .col = 2 }, 
         .surface = try self.list_view.draw(ctx.withConstraints(
             ctx.min, .{ .width = 100, .height = max.height - 10},
         )),
     };
-
     const children = try ctx.arena.alloc(vxfw.SubSurface, 3);
     children[0] = text_field;
     children[1] = text;
@@ -87,11 +98,13 @@ pub fn textFieldOnChange(_: ?*anyopaque, _: *vxfw.EventContext, _: []const u8) a
         // try self.text_fieldcinsertSliceAtCursor("You typed something!");
         return;
 }
-pub fn textFieldOnSubmit(maybe_ptr: ?*anyopaque, _: *vxfw.EventContext, _: []const u8) anyerror!void {
+pub fn textFieldOnSubmit(maybe_ptr: ?*anyopaque, _: *vxfw.EventContext, input: []const u8) anyerror!void {
     const ptr = maybe_ptr orelse return;
     const self: *Self = @ptrCast(@alignCast(ptr));
-    self.text_field.deleteAfterCursor();
-    self.text_field.deleteBeforeCursor();
+    const input_trimmed = std.mem.trimLeft(u8, input, &[_]u8{'>', ' '});
+    const txt = try self.arena.allocator().dupe(u8, input_trimmed);
+    try self.selected.append(txt);
+    self.text_field.clearAndFree();
     try self.text_field.insertSliceAtCursor("> ");
     return;
 }

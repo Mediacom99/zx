@@ -28,8 +28,12 @@ event: vxfw.Event) anyerror!void {
             log.debug("Commands: {d}", .{self.history.list.len});
             while (temp) |node| {
                 var spans = std.ArrayList(vxfw.RichText.TextSpan).init(allocator);
+                const text = try std.fmt.allocPrint(allocator, 
+                                    "[{d}] {s}", 
+                                    .{node.data.reruns, node.data.cmd}
+                                );
                 const text_span: vxfw.RichText.TextSpan = .{
-                    .text = node.data.cmd, 
+                    .text = text,
                     .style = .{.bold = false}
                 };
                 try spans.append(text_span);
@@ -44,7 +48,7 @@ event: vxfw.Event) anyerror!void {
             return ctx.requestFocus(self.list_view.widget());
         },
         .key_press => |key| {
-            if (key.matches('c', .{ .ctrl = true })) {
+            if (key.matches('q', .{})) {
                 ctx.quit = true;
                 return;
             }
@@ -74,9 +78,9 @@ fn typeErasedDrawFn(ptr: *anyopaque, ctx: vxfw.DrawContext) Allocator.Error!vxfw
         )),
     };
     const list_view: vxfw.SubSurface = .{
-        .origin = .{ .row = 5, .col = 2 }, 
+        .origin = .{ .row = 3, .col = 2 }, 
         .surface = try self.list_view.draw(ctx.withConstraints(
-            ctx.min, .{ .width = 100, .height = max.height - 10},
+            ctx.min, .{ .width = ctx.max.width, .height = max.height - 6},
         )),
     };
     const children = try ctx.arena.alloc(vxfw.SubSurface, 3);
@@ -98,7 +102,7 @@ pub fn textFieldOnChange(_: ?*anyopaque, _: *vxfw.EventContext, _: []const u8) a
         // try self.text_fieldcinsertSliceAtCursor("You typed something!");
         return;
 }
-pub fn textFieldOnSubmit(maybe_ptr: ?*anyopaque, _: *vxfw.EventContext, input: []const u8) anyerror!void {
+pub fn textFieldOnSubmit(maybe_ptr: ?*anyopaque, event_ctx: *vxfw.EventContext, input: []const u8) anyerror!void {
     const ptr = maybe_ptr orelse return;
     const self: *Self = @ptrCast(@alignCast(ptr));
     const input_trimmed = std.mem.trimLeft(u8, input, &[_]u8{'>', ' '});
@@ -106,6 +110,7 @@ pub fn textFieldOnSubmit(maybe_ptr: ?*anyopaque, _: *vxfw.EventContext, input: [
     try self.selected.append(txt);
     self.text_field.clearAndFree();
     try self.text_field.insertSliceAtCursor("> ");
+    try event_ctx.requestFocus(self.list_view.widget());
     return;
 }
 

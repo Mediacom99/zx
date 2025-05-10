@@ -2,7 +2,7 @@ pub fn main() !void {
     var args = std.process.args();
     _ = args.skip();
     const hist_file_path = args.next() orelse {
-         return History.Error.InvalidFilePath;
+         return History.Error.MissingFilePath;
     };
 
     var gpa = std.heap.DebugAllocator(.{}).init;

@@ -1,12 +1,16 @@
 pub const Error = error {
     InvalidFilePath,
+    MissingFilePath,
     EmptyFile,
     ParseFailed,
     InitFailed,
+    FileTooBigMax100MB,
 };
 
 ///max non-space bytes hashed to create the key
 const key_size: usize = 255;
+
+const max_file_size: usize = 1024 * 1024 * 100; //100MB
 
 //Used to prealloacate space for hash maps
 const bytes_per_line: usize = 32;
@@ -15,7 +19,6 @@ pub const Command = struct {
     cmd: []const u8,
     reruns: usize = 1,
 };
-
 
 file_path: []const u8 = undefined,
 
@@ -55,11 +58,10 @@ pub fn parseFile(self: *Self, path: []const u8) !void {
     }
     defer file.close();
 
-    const md = try file.metadata();
-    const size = md.size();
-    if (size == 0) {
-        return Error.EmptyFile;
-    }
+    const metadata = try file.metadata();
+    const size = metadata.size();
+    if (size == 0) { return Error.EmptyFile; }
+    if (size > max_file_size) { return Error.FileTooBigMax100MB; }
     var raw_content: []u8 = undefined;
     
     //For linux we map file to memory

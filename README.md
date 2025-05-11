@@ -12,11 +12,8 @@ Built using [libvaxis](https://github.com/rockorager/libvaxis) modern tui librar
 [ ] Unbuffered IO / syscall overhead (fix)
 
 ## Optimizations
-[x] Use mmap syscall to directly map file into memory (std.posix.mmap)
-[ ] hashing indices of start/end command instead of copying command
-[x] Use linked list + hash map by hashing nodes
+[ ] use indices of start/end command instead of copying command
 [ ] Use simd instruction when parsing file
-[ ] use stack instead of heap for small file sizes (< 4KB)
 
 ## Supported shells
 - [X] bash
@@ -27,9 +24,9 @@ Built using [libvaxis](https://github.com/rockorager/libvaxis) modern tui librar
 - [ ] fish
 
 ## Next steps
-- [ ] display history entries in scrollable list
-- [ ] history navigation with vim-keys
-- [ ] execute selected command
+- [x] display history entries in scrollable list
+- [x] history navigation with vim-keys
+- [x] execute selected command
 - [ ] searching/filtering
 - [ ] add some configuration options
 - [ ] better logging

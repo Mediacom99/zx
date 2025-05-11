@@ -1,10 +1,40 @@
+pub fn asTextUpper(comptime level: std.log.Level) []const u8 {
+    return switch (level) {
+        .err => "ERROR",
+        .warn => "WARN",
+        .info => "INFO",
+        .debug => "DEBUG",
+    };
+}
+
+pub const std_options: std.Options = .{
+    // Set the log level to info
+    .log_level = .debug,
+    // Define logFn to override the std implementation
+    .logFn = myLogFn,
+};
+
+pub fn myLogFn(
+ comptime level: std.log.Level,
+ comptime _: @Type(.enum_literal),
+ comptime format: []const u8,
+ args: anytype,
+) void {
+ std.debug.lockStdErr();
+ defer std.debug.unlockStdErr();
+ const stderr = std.io.getStdErr().writer();
+ nosuspend stderr.print(asTextUpper(level) ++ ": " ++ format ++ "\n", args) catch return;
+}
+
 pub fn main() !void {
+    var hist_file_path: []const u8 = "/home/mediacom/.histfile";
     var args = std.process.args();
     _ = args.skip();
-    const hist_file_path = args.next() orelse {
-         return History.Error.MissingFilePath;
-    };
-
+    if (args.next()) |arg| {
+       hist_file_path = arg; 
+    } else {
+        log.info("No file path provided, using default: {s}", .{hist_file_path});
+    }
     var gpa = std.heap.DebugAllocator(.{}).init;
     defer _ = gpa.deinit();
 
@@ -25,7 +55,7 @@ pub fn main() !void {
     ui.history = history;
     ui.arena = std.heap.ArenaAllocator.init(allocator);
     ui.list_items = std.ArrayList(vxfw.RichText).init(allocator);
-    ui.selected = std.ArrayList([]const u8).init(allocator);
+    ui.result = null;
     ui.text = .{
         .text = "Welcome to Zhist!",
         .width_basis = .parent,
@@ -50,14 +80,20 @@ pub fn main() !void {
     defer ui.text_field.deinit();
     defer ui.arena.deinit();
     defer ui.list_items.deinit();
-    defer ui.selected.deinit();
 
     try app.run(ui.widget(), .{.framerate = 60});
     app.deinit();
 
-    const writer = std.io.getStdOut().writer();
-    for (ui.selected.items) |txt| {
-        try writer.print("{s}\n", .{txt});
+    if (ui.result) |res| {
+        var skip_reruns: usize = 0;
+        for (0..res.len) |i| {
+            if (res[i] == ']') {
+                skip_reruns = i;
+                break;
+            }
+        }
+        const writer = std.io.getStdOut().writer();
+        try writer.print("{s}\n", .{res[skip_reruns + 2..]});
     }
 }
 

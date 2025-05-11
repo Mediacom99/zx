@@ -4,7 +4,7 @@ text: vxfw.Text,
 history: History,
 list_items: std.ArrayList(vxfw.RichText),
 arena: std.heap.ArenaAllocator,
-selected: std.ArrayList([]const u8),
+result: ?[]const u8,
 
 pub fn widget(self: *Self) vxfw.Widget {
     return .{
@@ -55,6 +55,12 @@ event: vxfw.Event) anyerror!void {
             if (key.matches('/', .{})) {
                 return ctx.requestFocus(self.text_field.widget());
             }
+            if (key.matches(vaxis.Key.enter, .{})) {
+                const rt = self.list_items.items[self.list_view.cursor];
+                assert(rt.text.len == 1);
+                self.result = rt.text[0].text;
+                ctx.quit = true;
+            }
             return self.list_view.handleEvent(ctx, event);
         },
         .focus_in => {
@@ -102,12 +108,9 @@ pub fn textFieldOnChange(_: ?*anyopaque, _: *vxfw.EventContext, _: []const u8) a
         // try self.text_fieldcinsertSliceAtCursor("You typed something!");
         return;
 }
-pub fn textFieldOnSubmit(maybe_ptr: ?*anyopaque, event_ctx: *vxfw.EventContext, input: []const u8) anyerror!void {
+pub fn textFieldOnSubmit(maybe_ptr: ?*anyopaque, event_ctx: *vxfw.EventContext, _: []const u8) anyerror!void {
     const ptr = maybe_ptr orelse return;
     const self: *Self = @ptrCast(@alignCast(ptr));
-    const input_trimmed = std.mem.trimLeft(u8, input, &[_]u8{'>', ' '});
-    const txt = try self.arena.allocator().dupe(u8, input_trimmed);
-    try self.selected.append(txt);
     self.text_field.clearAndFree();
     try self.text_field.insertSliceAtCursor("> ");
     try event_ctx.requestFocus(self.list_view.widget());
@@ -124,6 +127,7 @@ pub fn listViewWidgetBuilder(ptr: *const anyopaque, idx: usize, _: usize) ?vxfw.
 
 const std = @import("std");
 const log = std.log;
+const assert = std.debug.assert;
 const vaxis = @import("vaxis");
 const vxfw = vaxis.vxfw;
 const Self = @This();

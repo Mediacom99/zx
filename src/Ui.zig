@@ -3,7 +3,7 @@ list_view: vxfw.ListView,
 text: vxfw.Text,
 history: History,
 list_items: std.ArrayList(vxfw.RichText),
-arena: std.heap.ArenaAllocator,
+arena: Allocator,
 result: ?[]const u8,
 
 pub fn widget(self: *Self) vxfw.Widget {
@@ -23,12 +23,11 @@ event: vxfw.Event) anyerror!void {
             try self.text_field.insertSliceAtCursor("> ");
 
             //List view
-            const allocator = self.arena.allocator();
             var temp = self.history.list.last;
             log.debug("Commands: {d}", .{self.history.list.len});
             while (temp) |node| {
-                var spans = std.ArrayList(vxfw.RichText.TextSpan).init(allocator);
-                const text = try std.fmt.allocPrint(allocator, 
+                var spans = std.ArrayList(vxfw.RichText.TextSpan).init(self.arena);
+                const text = try std.fmt.allocPrint(self.arena, 
                                     "[{d}] {s}", 
                                     .{node.data.reruns, node.data.cmd}
                                 );

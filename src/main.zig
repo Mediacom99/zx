@@ -1,31 +1,3 @@
-pub fn asTextUpper(comptime level: std.log.Level) []const u8 {
-    return switch (level) {
-        .err => "ERROR",
-        .warn => "WARN",
-        .info => "INFO",
-        .debug => "DEBUG",
-    };
-}
-
-pub const std_options: std.Options = .{
-    // Set the log level to info
-    .log_level = .debug,
-    // Define logFn to override the std implementation
-    .logFn = myLogFn,
-};
-
-pub fn myLogFn(
- comptime level: std.log.Level,
- comptime _: @Type(.enum_literal),
- comptime format: []const u8,
- args: anytype,
-) void {
- std.debug.lockStdErr();
- defer std.debug.unlockStdErr();
- const stderr = std.io.getStdErr().writer();
- nosuspend stderr.print(asTextUpper(level) ++ ": " ++ format ++ "\n", args) catch return;
-}
-
 pub fn main() !void {
     var hist_file_path: []const u8 = "/home/mediacom/.histfile";
     var args = std.process.args();
@@ -37,10 +9,13 @@ pub fn main() !void {
     }
     var gpa = std.heap.DebugAllocator(.{}).init;
     defer _ = gpa.deinit();
-
     const allocator = gpa.allocator();
 
-    var history = History.init(allocator, hist_file_path);
+    var arena_allocator = std.heap.ArenaAllocator.init(allocator);
+    defer arena_allocator.deinit();
+    const arena = arena_allocator.allocator();
+
+    var history = History.init(allocator, arena, hist_file_path);
     defer history.deinit();
     try history.parseFile(hist_file_path);
 
@@ -53,7 +28,7 @@ pub fn main() !void {
     const Color = vaxis.Cell.Color;
     const gruber_yellow: Color = .{ .rgb =  [_]u8{255, 221, 51} };
     ui.history = history;
-    ui.arena = std.heap.ArenaAllocator.init(allocator);
+    ui.arena = arena;
     ui.list_items = std.ArrayList(vxfw.RichText).init(allocator);
     ui.result = null;
     ui.text = .{
@@ -78,7 +53,6 @@ pub fn main() !void {
         },
     };
     defer ui.text_field.deinit();
-    defer ui.arena.deinit();
     defer ui.list_items.deinit();
 
     try app.run(ui.widget(), .{.framerate = 60});
@@ -92,9 +66,35 @@ pub fn main() !void {
                 break;
             }
         }
-        const writer = std.io.getStdOut().writer();
-        try writer.print("{s}\n", .{res[skip_reruns + 2..]});
+        const prompt = res[skip_reruns + 2..];  // Extracted command string
+        try std.io.getStdOut().writer().print("{s}\n", .{prompt});
     }
+}
+
+pub fn asTextUpper(comptime level: std.log.Level) []const u8 {
+    return switch (level) {
+        .err => "ERROR",
+        .warn => "WARN",
+        .info => "INFO",
+        .debug => "DEBUG",
+    };
+}
+
+pub const std_options: std.Options = .{
+    .log_level = .debug,
+    .logFn = myLogFn,
+};
+
+pub fn myLogFn(
+ comptime level: std.log.Level,
+ comptime _: @Type(.enum_literal),
+ comptime format: []const u8,
+ args: anytype,
+) void {
+ std.debug.lockStdErr();
+ defer std.debug.unlockStdErr();
+ const stderr = std.io.getStdErr().writer();
+ nosuspend stderr.print(asTextUpper(level) ++ ": " ++ format ++ "\n", args) catch return;
 }
 
 

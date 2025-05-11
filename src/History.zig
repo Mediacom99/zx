@@ -28,14 +28,14 @@ map: Map = undefined,
 
 gpa: Allocator,
 
-arena: std.heap.ArenaAllocator,
+arena: Allocator,
 
 /// Initialize History Service with given history file
-pub fn init(allocator: Allocator, histfile_path: []const u8) Self {
+pub fn init(allocator: Allocator, arena: Allocator, histfile_path: []const u8) Self {
     return .{
         .file_path = histfile_path,
         .gpa = allocator,
-        .arena = std.heap.ArenaAllocator.init(allocator),
+        .arena = arena,
         .list = List{},
         .map = Map.init(allocator),
     };
@@ -43,7 +43,6 @@ pub fn init(allocator: Allocator, histfile_path: []const u8) Self {
 
 /// Nodes must be manually freed
 pub fn deinit(self: *Self) void {
-    self.arena.deinit();
     self.map.deinit();
     return;
 }
@@ -112,15 +111,14 @@ pub fn parseFile(self: *Self, path: []const u8) !void {
             }
         }
         if (key_len == 0) continue;
-        const allocator = self.arena.allocator();
-        const key = try allocator.dupe(u8, key_buf[0..key_len]);
+        const key = try self.arena.dupe(u8, key_buf[0..key_len]);
         if (self.map.get(key)) |node| {
                node.*.data.reruns += 1; 
                self.list.remove(node);
                self.list.append(node);
         } else {
-            const cmd_trimmed = try allocator.dupe(u8, std.mem.trim(u8, cmd, " "));
-            const new_node = try allocator.create(List.Node);
+            const cmd_trimmed = try self.arena.dupe(u8, std.mem.trim(u8, cmd, " "));
+            const new_node = try self.arena.create(List.Node);
             const new_cmd = Command{.cmd = cmd_trimmed};
             new_node.data = new_cmd;
             try self.map.putNoClobber(key, new_node);

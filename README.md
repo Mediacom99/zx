@@ -24,11 +24,13 @@ zig build run -- <your bash/zsh history file>
 - [ ] zsh
 - [ ] fish
 
-## Next steps
+## Simple features and next steps
+- [x] display file entries in scrollable list with duplicate count
+- [x] history navigation with j/k
 - [ ] use indices of start/end command instead of copying command
-- [x] display history entries in scrollable list
-- [x] history navigation with vim-keys
-- [x] execute selected command
+- [ ] execute selected command automatically on zsh
+- [ ] run zhist with keybind on zsh for even faster flow (it's all about that)
+- [ ] modify command and single argument before running
 - [ ] searching/filtering
 - [ ] add some configuration options
 - [ ] better logging
@@ -36,7 +38,6 @@ zig build run -- <your bash/zsh history file>
 - [ ] tokenize each command to differentiate between root and arguments
 - [ ] select multiple commands and chain them or pipe stuff between them
 - [ ] add blacklist feature (those commands will be ignored if found in histfile)
-- [ ] modify command and single argument(s)
 
 ## Advanced features
 
@@ -49,6 +50,4 @@ zig build run -- <your bash/zsh history file>
 
 # Useful links
 (Semantic versioning)[https://semver.org/]
-
 [Finite state machine for string representation](https://burntsushi.net/transducers/#fsa-construction)
-

@@ -19,8 +19,8 @@ zig build run -- <your bash/zsh history file>
 ## Supported shells
 - [ ] bash
     - [ ] history is read from bash history file and refreshed using `history` command.
-          (or maybe directly from history output)
-      Another option is to use libreadline.
+            (or maybe directly from history output)
+            Another option is to use libreadline.
 - [ ] zsh
 - [ ] fish
 
@@ -49,5 +49,5 @@ zig build run -- <your bash/zsh history file>
 - [ ] AI assistant integration
 
 # Useful links
-(Semantic versioning)[https://semver.org/]
-[Finite state machine for string representation](https://burntsushi.net/transducers/#fsa-construction)
+- (Semantic versioning)[https://semver.org/]
+- [Finite state machine for string representation](https://burntsushi.net/transducers/#fsa-construction)

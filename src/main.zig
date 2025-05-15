@@ -81,7 +81,7 @@ pub fn asTextUpper(comptime level: std.log.Level) []const u8 {
 }
 
 pub const std_options: std.Options = .{
-    .log_level = .debug,
+    .log_level = .err,
     .logFn = myLogFn,
 };
 

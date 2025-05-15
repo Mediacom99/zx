@@ -8,12 +8,9 @@ pub const Error = error {
 };
 
 ///max non-space bytes hashed to create the key
-const key_size: usize = 255;
+const KEY_SIZE: usize = 256;
 
-const max_file_size: usize = 1024 * 1024 * 100; //100MB
-
-//Used to prealloacate space for hash maps
-const bytes_per_line: usize = 32;
+const MAX_FILE_SIZE: usize = 1024 * 1024 * 100; //100MB
 
 pub const Command = struct {
     cmd: []const u8,
@@ -30,7 +27,6 @@ gpa: Allocator,
 
 arena: Allocator,
 
-/// Initialize History Service with given history file
 pub fn init(allocator: Allocator, arena: Allocator, histfile_path: []const u8) Self {
     return .{
         .file_path = histfile_path,
@@ -41,13 +37,11 @@ pub fn init(allocator: Allocator, arena: Allocator, histfile_path: []const u8) S
     };
 }
 
-/// Nodes must be manually freed
 pub fn deinit(self: *Self) void {
     self.map.deinit();
     return;
 }
 
-/// parses history file and loads it into internal hash map.
 pub fn parseFile(self: *Self, path: []const u8) !void {
     var file: std.fs.File = undefined;
     if (std.fs.path.isAbsolute(path)) {
@@ -60,10 +54,10 @@ pub fn parseFile(self: *Self, path: []const u8) !void {
     const metadata = try file.metadata();
     const size = metadata.size();
     if (size == 0) { return Error.EmptyFile; }
-    if (size > max_file_size) { return Error.FileTooBigMax100MB; }
+    if (size > MAX_FILE_SIZE) { return Error.FileTooBigMax100MB; }
     var raw_content: []u8 = undefined;
     
-    //For linux we map file to memory
+    //For linux we use mmap syscall
     if(builtin.target.os.tag == .linux) {
         raw_content = try std.posix.mmap(
             null,
@@ -93,17 +87,17 @@ pub fn parseFile(self: *Self, path: []const u8) !void {
         }
     }
     assert(raw_content.len == size);
-    const new_size = utils.sanitizeAscii(raw_content);
 
-    //FIXME need this?
-    const content_trimmed = std.mem.trim(u8, raw_content[0..new_size], "\n"); 
+    //TODO we can just clean the output command at the end of main
+    // const new_size = utils.sanitizeAscii(raw_content);
 
-    var iter = std.mem.splitScalar(u8, content_trimmed, '\n');
+    var iter = std.mem.splitScalar(u8, raw_content, '\n');
     while(iter.next()) |cmd| {
+        if (cmd.len == 0) continue;
         //the key is the first KEY_SIZE bytes of cmd that are not spaces
-        var key_buf: [key_size]u8 = undefined;
+        var key_buf: [KEY_SIZE]u8 = undefined;
         var key_len: usize = 0;
-        for (0..key_size) |i| {
+        for (0..key_buf.len) |i| {
             if (i == cmd.len) break;
             if (cmd[i] != ' '){ 
                 key_buf[key_len] = cmd[i];
@@ -111,16 +105,16 @@ pub fn parseFile(self: *Self, path: []const u8) !void {
             }
         }
         if (key_len == 0) continue;
+        assert(key_len <= KEY_SIZE);
         const key = try self.arena.dupe(u8, key_buf[0..key_len]);
         if (self.map.get(key)) |node| {
-               node.*.data.reruns += 1; 
+               node.data.reruns += 1; 
                self.list.remove(node);
                self.list.append(node);
         } else {
             const cmd_trimmed = try self.arena.dupe(u8, std.mem.trim(u8, cmd, " "));
             const new_node = try self.arena.create(List.Node);
-            const new_cmd = Command{.cmd = cmd_trimmed};
-            new_node.data = new_cmd;
+            new_node.data = Command{.cmd = cmd_trimmed};
             try self.map.putNoClobber(key, new_node);
             self.list.append(new_node);
         }

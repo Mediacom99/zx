@@ -23,10 +23,14 @@ zig build run -- <your bash/zsh history file>
 - [ ] fish
 
 ## Simple features and next steps
+- [ ] add utf8 sanitization (invalid codepoints, invisible char, normalization for fuzzy search):
+    - [ ] parse UTF-16 into WTF-8, use them internally, parse back to UTF-16
+    - [ ] normalization (match 'e' against 'é') and case folding
+    - [ ] check for grapheme clusters (like emojis)
 - [ ] add help menu with keybinds
+- [ ] implement [fzf](https://github.com/junegunn/fzf) fuzzy search algorithms
 - [x] display file entries in scrollable list with duplicate count
 - [x] history navigation with j/k
-- [ ] use indices of start/end command instead of copying command
 - [x] execute selected command automatically on zsh
 - [x] run zhist with keybind on zsh for even faster flow (it's all about that)
 - [ ] modify command and single argument before running
@@ -40,6 +44,7 @@ zig build run -- <your bash/zsh history file>
 
 ## Advanced features
 
+- [ ] use indices of command in original text instead of copying command to reduce memory footprint
 - [ ] Use simd instruction when parsing file
 - [ ] parallel file's chunks parsing (threads)
 - [ ] create, save, list and use custom scripts

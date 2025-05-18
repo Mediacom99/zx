@@ -1,16 +1,12 @@
 pub const Error = error {
-    InvalidFilePath,
-    MissingFilePath,
     EmptyFile,
-    ParseFailed,
-    InitFailed,
-    FileTooBigMax100MB,
+    FileTooBig_Max50MB,
 };
 
 ///max non-space bytes hashed to create the key
 const KEY_SIZE: usize = 256;
 
-const MAX_FILE_SIZE: usize = 1024 * 1024 * 100; //100MB
+const MAX_FILE_SIZE: usize = 512 * 1024 * 100; //50MB
 
 pub const Command = struct {
     cmd: []const u8,
@@ -54,10 +50,9 @@ pub fn parseFile(self: *Self, path: []const u8) !void {
     const metadata = try file.metadata();
     const size = metadata.size();
     if (size == 0) { return Error.EmptyFile; }
-    if (size > MAX_FILE_SIZE) { return Error.FileTooBigMax100MB; }
+    if (size > MAX_FILE_SIZE) { return Error.FileTooBig_Max50MB; }
+
     var raw_content: []u8 = undefined;
-    
-    //For linux we use mmap syscall
     if(builtin.target.os.tag == .linux) {
         raw_content = try std.posix.mmap(
             null,
@@ -72,10 +67,10 @@ pub fn parseFile(self: *Self, path: []const u8) !void {
         }
         log.debug("Bytes mmapped to virtual mem: {}", .{raw_content.len});
     } else {
-            raw_content = try self.gpa.alloc(u8, size);
+        raw_content = try self.gpa.alloc(u8, size);
         const bytes_read = try file.readAll(raw_content);
         if (bytes_read == 0) {
-            return Error.ParseFailed;
+            return Error.EmptyFile;
         }
         log.debug("history file loaded, bytes read: {d}", .{bytes_read});
     }
@@ -88,10 +83,9 @@ pub fn parseFile(self: *Self, path: []const u8) !void {
     }
     assert(raw_content.len == size);
 
-    //TODO we can just clean the output command at the end of main
-    // const new_size = utils.sanitizeAscii(raw_content);
-
-    var iter = std.mem.splitScalar(u8, raw_content, '\n');
+    const new_size = ascii.sanitizeAscii(raw_content);
+    
+    var iter = std.mem.splitScalar(u8, raw_content[0..new_size], '\n');
     while(iter.next()) |cmd| {
         if (cmd.len == 0) continue;
         //the key is the first KEY_SIZE bytes of cmd that are not spaces
@@ -143,5 +137,5 @@ const std = @import("std");
 const assert = std.debug.assert;
 const builtin = @import("builtin");
 const log = std.log;
-const utils = @import("utils.zig");
 const Allocator = std.mem.Allocator;
+const ascii = @import("ascii.zig");

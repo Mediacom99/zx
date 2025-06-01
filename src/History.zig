@@ -4,9 +4,9 @@ pub const Error = error {
 };
 
 ///max non-space bytes hashed to create the key
-const KEY_SIZE: usize = 256;
+const key_size: usize = 256;
 
-const MAX_FILE_SIZE: usize = 512 * 1024 * 100; //50MB
+const max_file_size: usize = 512 * 1024 * 100; //50MB
 
 pub const Command = struct {
     cmd: []const u8,
@@ -50,7 +50,7 @@ pub fn parseFile(self: *Self, path: []const u8) !void {
     const metadata = try file.metadata();
     const size = metadata.size();
     if (size == 0) { return Error.EmptyFile; }
-    if (size > MAX_FILE_SIZE) { return Error.FileTooBig_Max50MB; }
+    if (size > max_file_size) { return Error.FileTooBig_Max50MB; }
 
     var raw_content: []u8 = undefined;
     if(builtin.target.os.tag == .linux) {
@@ -89,7 +89,7 @@ pub fn parseFile(self: *Self, path: []const u8) !void {
     while(iter.next()) |cmd| {
         if (cmd.len == 0) continue;
         //the key is the first KEY_SIZE bytes of cmd that are not spaces
-        var key_buf: [KEY_SIZE]u8 = undefined;
+        var key_buf: [key_size]u8 = undefined;
         var key_len: usize = 0;
         for (0..key_buf.len) |i| {
             if (i == cmd.len) break;
@@ -99,7 +99,7 @@ pub fn parseFile(self: *Self, path: []const u8) !void {
             }
         }
         if (key_len == 0) continue;
-        assert(key_len <= KEY_SIZE);
+        assert(key_len <= key_size);
         const key = try self.arena.dupe(u8, key_buf[0..key_len]);
         if (self.map.get(key)) |node| {
                node.data.reruns += 1; 

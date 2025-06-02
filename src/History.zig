@@ -38,7 +38,7 @@ pub fn deinit(self: *Self) void {
     return;
 }
 
-pub fn parseFile(self: *Self, path: []const u8) !void {
+pub fn parseFile(self: *Self, alloc: Allocator, path: []const u8) !void {
     var file: std.fs.File = undefined;
     if (std.fs.path.isAbsolute(path)) {
         file = try std.fs.openFileAbsolute(path, .{});
@@ -52,9 +52,9 @@ pub fn parseFile(self: *Self, path: []const u8) !void {
     if (size == 0) { return Error.EmptyFile; }
     if (size > max_file_size) { return Error.FileTooBig_Max50MB; }
 
-    var raw_content: []u8 = undefined;
+    var content: []u8 = undefined;
     if(builtin.target.os.tag == .linux) {
-        raw_content = try std.posix.mmap(
+        content = try std.posix.mmap(
             null,
             size, 
             std.posix.PROT.READ | std.posix.PROT.WRITE,
@@ -62,30 +62,31 @@ pub fn parseFile(self: *Self, path: []const u8) !void {
             file.handle,
             0
         );
-        if (raw_content.len == 0) {
+        if (content.len == 0) {
             return Error.EmptyFile;
         }
-        log.debug("Bytes mmapped to virtual mem: {}", .{raw_content.len});
+        log.debug("history file loaded, bytes mmapped to vmem: {}", .{content.len});
     } else {
-        raw_content = try self.gpa.alloc(u8, size);
-        const bytes_read = try file.readAll(raw_content);
+        content = try self.gpa.alloc(u8, size);
+        const bytes_read = try file.readAll(content);
         if (bytes_read == 0) {
             return Error.EmptyFile;
         }
         log.debug("history file loaded, bytes read: {d}", .{bytes_read});
     }
-    defer {
-        if (builtin.target.os.tag == .linux) {
-            std.posix.munmap(@alignCast(raw_content));
-        } else {
-           self.gpa.free(raw_content);
-        }
-    }
-    assert(raw_content.len == size);
-
-    const new_size = ascii.sanitizeAscii(raw_content);
+    assert(content.len == size);
     
-    var iter = std.mem.splitScalar(u8, raw_content[0..new_size], '\n');
+    // I dont like this allocating a whole new slice but its needed
+    // to add utf8 replacement char.
+    const valid_content = try unicode.makeValidUtf8FromSlice(alloc, content);
+    if (builtin.target.os.tag == .linux) {
+        std.posix.munmap(@alignCast(content));
+    } else {
+       self.gpa.free(content);
+    }
+    defer alloc.free(valid_content);
+
+    var iter = std.mem.splitScalar(u8, valid_content, '\n');
     while(iter.next()) |cmd| {
         if (cmd.len == 0) continue;
         //the key is the first KEY_SIZE bytes of cmd that are not spaces
@@ -115,6 +116,7 @@ pub fn parseFile(self: *Self, path: []const u8) !void {
     }
 }
 
+
 pub fn debugPrintMap(self: *Self) void {
     var val_iter = self.map.valueIterator();
     while(val_iter.next()) |val| {
@@ -130,6 +132,7 @@ pub fn debugPrintList(self: *Self) void {
     }
 }
 
+const unicode = @import("unicode.zig");
 const Map = std.StringHashMap(*List.Node);
 const List = std.DoublyLinkedList(Command);
 const Self = @This();
@@ -138,4 +141,3 @@ const assert = std.debug.assert;
 const builtin = @import("builtin");
 const log = std.log;
 const Allocator = std.mem.Allocator;
-const ascii = @import("ascii.zig");

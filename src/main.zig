@@ -17,7 +17,7 @@ pub fn main() !void {
 
     var history = History.init(allocator, arena, hist_file_path);
     defer history.deinit();
-    try history.parseFile(hist_file_path);
+    try history.parseFile(allocator, hist_file_path);
 
     const ui = try allocator.create(Ui);
     defer allocator.destroy(ui);
@@ -81,7 +81,7 @@ pub fn asTextUpper(comptime level: std.log.Level) []const u8 {
 }
 
 pub const std_options: std.Options = .{
-    .log_level = .err,
+    .log_level = .debug,
     .logFn = myLogFn,
 };
 

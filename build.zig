@@ -6,17 +6,17 @@ pub fn build(b: *std.Build) void {
     const docs_step = b.step("docs", 
     "Install generated docs into zig-out/prefix");
     const unicode_tests_step = b.step("unicode-tests", "Run unicode.zig tests");
+    const history_tests_step = b.step("history-tests", "Run History.zig tests");
 
-    const target = b.standardTargetOptions(.{});
-    const optimize = b.standardOptimizeOption(.{});
-    const vaxis = b.dependency("vaxis", .{
-        .optimize = optimize,
-        .target = target,
-    });
+    const deps_args = .{ 
+        .optimize = b.standardOptimizeOption(.{}),
+        .target = b.standardTargetOptions(.{}),
+    };
+    const vaxis = b.dependency("vaxis", deps_args);
     const exe_module = b.createModule(.{
         .root_source_file = b.path("src/main.zig"),
-        .optimize = optimize,
-        .target = target,
+        .optimize = deps_args.optimize,
+        .target = deps_args.target,
     });
     exe_module.addImport("vaxis", vaxis.module("vaxis"));
     
@@ -44,10 +44,21 @@ pub fn build(b: *std.Build) void {
     const unicode_tests = b.addTest(.{
         .root_module = b.createModule(.{
             .root_source_file = b.path("./src/unicode.zig"),
-            .target = target,
-            .optimize = optimize,
+            .target = deps_args.target,
+            .optimize = deps_args.optimize,
         }),
     });
     const run_unicode_tests = b.addRunArtifact(unicode_tests);
     unicode_tests_step.dependOn(&run_unicode_tests.step);
+
+    //History tests
+    const history_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("./src/History.zig"),
+            .target = deps_args.target,
+            .optimize = deps_args.optimize,
+        }),
+    });
+    const run_history_tests = b.addRunArtifact(history_tests);
+    history_tests_step.dependOn(&run_history_tests.step);
 }

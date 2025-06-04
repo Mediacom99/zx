@@ -124,6 +124,10 @@ pub fn listViewWidgetBuilder(ptr: *const anyopaque, idx: usize, _: usize) ?vxfw.
     return self.list_items.items[idx].widget();
 }
 
+test {
+    std.log.debug("Hello!", .{});
+}
+
 const std = @import("std");
 const log = std.log;
 const assert = std.debug.assert;

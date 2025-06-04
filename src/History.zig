@@ -13,8 +13,6 @@ pub const Command = struct {
     reruns: usize = 1,
 };
 
-file_path: []const u8 = undefined,
-
 list: List = undefined,
 
 map: Map = undefined,
@@ -23,9 +21,8 @@ gpa: Allocator,
 
 arena: Allocator,
 
-pub fn init(allocator: Allocator, arena: Allocator, histfile_path: []const u8) Self {
+pub fn init(allocator: Allocator, arena: Allocator) Self {
     return .{
-        .file_path = histfile_path,
         .gpa = allocator,
         .arena = arena,
         .list = List{},
@@ -38,7 +35,7 @@ pub fn deinit(self: *Self) void {
     return;
 }
 
-pub fn parseFile(self: *Self, alloc: Allocator, path: []const u8) !void {
+pub fn parseFile(self: *Self, path: []const u8) !void {
     var file: std.fs.File = undefined;
     if (std.fs.path.isAbsolute(path)) {
         file = try std.fs.openFileAbsolute(path, .{});
@@ -77,14 +74,15 @@ pub fn parseFile(self: *Self, alloc: Allocator, path: []const u8) !void {
     assert(content.len == size);
     
     // I dont like this allocating a whole new slice but its needed
-    // to add utf8 replacement char.
-    const valid_content = try unicode.makeValidUtf8FromSlice(alloc, content);
+    // to add utf8 replacement char. We could allocate 3 bytes per not ascii char
+    // for more memory consumption but faster execution.
+    const valid_content = try unicode.sanitizeUtf8UnmanagedStd(self.gpa, content);
     if (builtin.target.os.tag == .linux) {
         std.posix.munmap(@alignCast(content));
     } else {
        self.gpa.free(content);
     }
-    defer alloc.free(valid_content);
+    defer self.gpa.free(valid_content);
 
     var iter = std.mem.splitScalar(u8, valid_content, '\n');
     while(iter.next()) |cmd| {
@@ -130,6 +128,26 @@ pub fn debugPrintList(self: *Self) void {
         std.debug.print("[{d}] {s}\n", .{node.data.reruns, node.data.cmd});
         temp = node.next;
     }
+}
+
+//TODOs
+// Generate a bunch of random binary inputs to test.
+// try fuzzy testing ?
+// time it
+// move time calculation into its own source file in benchmarks folder
+test "historyParseFile with big file size" {
+    std.testing.log_level = .debug;
+    const file_path = "./assets/85374042_p0.png";
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    var history = Self.init(std.testing.allocator, arena.allocator());
+    defer history.deinit();
+
+    const start = std.time.nanoTimestamp(); 
+    try history.parseFile(file_path);
+    const nano_elapsed: f128 = @floatFromInt(std.time.nanoTimestamp() - start);
+    try std.testing.expectEqual(history.list.len, history.map.count());
+    std.log.debug("History.parseFile took: {e} seconds", .{nano_elapsed / (std.time.ns_per_s)});
 }
 
 const unicode = @import("unicode.zig");

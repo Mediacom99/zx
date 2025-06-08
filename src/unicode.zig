@@ -2,6 +2,8 @@ pub const Error = error {
     FailedSanitization,
 };
 
+//TODO: add support for graphemes cluster:whatwg
+
 // Formats an array of bytes into valid utf8 by replacing every invalid utf8 sequence using the
 // replacement codepoint 0xFFFD following unicode's 'Substitution of Maximal Subparts', thus
 // it consumes only the bytes for the longest invalid sequence.
@@ -18,12 +20,6 @@ pub fn sanitizeUtf8UnmanagedStd(alloc: std.mem.Allocator, input: []const u8) ![]
     log.debug("Output len: {d}", .{output.items.len});
     return try output.toOwnedSlice();
 }
-
-// \\Codepoint found: {u}
-// \\  Code:           U+{X:0>4}
-// \\  Consumed bytes: {d}
-// \\  Offset:         {d}
-// \\
 
 const std = @import("std");
 const log = std.log;

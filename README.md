@@ -16,6 +16,9 @@ zig build run -- <your bash/zsh history file>
 ```
 (q to quit, jk for up/down, enter to select and print to stdout)
 
+## TODO FZF FUZZY ALGO
+1. Write FuzzyMatchV1
+
 ## Supported shells
 - [ ] bash/zsh
     - [x] history is read from history file and selected command is appended to buffer

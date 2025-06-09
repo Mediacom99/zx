@@ -150,7 +150,7 @@ test "historyParseFile with big file size" {
     std.log.debug("History.parseFile took: {e} seconds", .{nano_elapsed / (std.time.ns_per_s)});
 }
 
-const unicode = @import("unicode.zig");
+const unicode = @import("./fuzzy/unicode.zig");
 const Map = std.StringHashMap(*List.Node);
 const List = std.DoublyLinkedList(Command);
 const Self = @This();

@@ -1,6 +1,5 @@
 const Self = @This();
 const std = @import("std");
-const Rune = @import("fuzzy.zig").Rune;
 const unicode = @import("unicode.zig");
 
 /// In case of utf8-encoded unicode input this slice is the u8 
@@ -74,7 +73,7 @@ pub fn initFromByteSlice(alloc: std.mem.Allocator, bytes: []const u8) !Self {
     }
 
     //Not only ascii, first we append the ascii we have
-    var runes = std.ArrayList(Rune).init(alloc);
+    var runes = std.ArrayList(i32).init(alloc);
     errdefer runes.deinit();
 
     for (0..ascii_until) |i| {
@@ -116,11 +115,11 @@ pub fn deinit(self: *Self, alloc: std.mem.Allocator) void {
 
 /// Casts back from u8 to original rune slice (i32).
 /// Returns null if internal slice is ascii only.
-pub fn optional_runes(self: Self) ?[]const Rune {
+pub fn optional_runes(self: Self) ?[]const i32 {
     if (self.is_ascii) {
         return null;
     }
-    const runes_ptr: [*]const Rune = @alignCast(@ptrCast(self.slice.ptr));
+    const runes_ptr: [*]const i32 = @alignCast(@ptrCast(self.slice.ptr));
     const runes_len = self.slice.len / @sizeOf(i32);
     return runes_ptr[0..runes_len];
 }

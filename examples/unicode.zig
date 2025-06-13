@@ -103,7 +103,7 @@ pub fn main() !void {
     std.debug.print("Input length in bytes: {}\n\n", .{input.len});
 
     // Now decode
-    var chars = try Chars.fromBytes(alloc, input);
+    var chars = try Chars.initFromByteSlice(alloc, input);
     defer chars.deinit(alloc);
 
     std.debug.print("--- Decoding Results ---\n", .{});

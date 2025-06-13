@@ -5,7 +5,6 @@ const expectEqual = std.testing.expectEqual;
 const log = std.log;
 const Slab = @import("slab").Slab;
 const std = @import("std");
-pub const Rune = i32;
 
 /// Match result
 pub const Result = struct {
@@ -191,10 +190,10 @@ fn trySkip(input: Chars, case_sensitive: bool, pattern_byte: u8, from: usize) i3
 }
 
 /// Computes min and max index which delimit the slice of input that might contain the match.
-/// It's an optimization in case of ascii only. The goal is to narrow down the scope 
+/// It's an optimization in case of ascii only. The goal is to narrow down the scope
 /// onto which to apply the actual matching algorithm.
 /// Returns start index and end index + 1 of the new scope.
-fn asciiFuzzyIndex(input: Chars, pattern: []const Rune, case_sensitive: bool) struct { i32, i32 } {
+fn asciiFuzzyIndex(input: Chars, pattern: []const i32, case_sensitive: bool) struct { i32, i32 } {
     // Not possible because input is not ascii only
     if (!input.is_ascii) {
         const end: i32 = @intCast(input.slice.len); //THIS LENGTH IS WRONG
@@ -247,30 +246,25 @@ fn asciiFuzzyIndex(input: Chars, pattern: []const Rune, case_sensitive: bool) st
     return .{ first_idx, last_idx + 1 };
 }
 
-// fn fuzzyMatchV1(case_sensitive: bool, normalize: bool, forward: bool, 
-// text: Chars, pattern: []Rune, with_pos: bool, slab: Slab) struct {Result, ?[]i32}{
+// fn fuzzyMatchV1(case_sensitive: bool, _: bool, _: bool, text: Chars, pattern: []i32, _: bool, 
+//                 _: Slab) struct { Result, ?[]i32 } {
 //     if (pattern.len == 0) {
-//         return .{Result{.start = 0, .end = 0, .score = 0}, null};
+//         return .{ Result{ .start = 0, .end = 0, .score = 0 }, null };
 //     }
 //
 //     // Narrow search scope
 //     const start_idx, _ = asciiFuzzyIndex(text, pattern, case_sensitive);
 //     if (start_idx < 0) {
-//         return .{Result.noMatch(), null};
+//         return .{ Result.noMatch(), null };
 //     }
 //
 //     const pidx: i32 = 0;
 //     const sidx: i32 = -1;
 //     const eidx: i32 = -1;
 //
-//     const len_runes = text.slice.len; //THIS LEN IS WRONG
+//     const len_runes = text.length();
 //     const len_pattern = pattern.len;
-//
 // }
-
-
-
-
 
 // //TODO remove prints and add expects
 test "init-fuzzy" {
@@ -289,7 +283,6 @@ test "init-fuzzy" {
     std.debug.print("\n", .{});
 }
 
-//
 test "trySkip-case-sensitive" {
     fuzzyInit("default");
     const alloc = std.testing.allocator;

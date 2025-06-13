@@ -1,3 +1,8 @@
+const std = @import("std");
+const fuzzy = @import("fuzzy");
+const Chars = fuzzy.Chars;
+const unicode = fuzzy.unicode;
+
 pub fn main() !void {
     var dba = std.heap.DebugAllocator(.{}).init;
     defer _ = dba.deinit();
@@ -126,8 +131,3 @@ pub fn main() !void {
         std.debug.print("{s}\n", .{desc});
     }
 }
-
-const std = @import("std");
-const fuzzy = @import("fuzzy");
-const Chars = fuzzy.Chars;
-const unicode = fuzzy.unicode;

@@ -1,3 +1,10 @@
+const std = @import("std");
+const Ui = @import("Ui.zig");
+const History = @import("History.zig");
+const vaxis = @import("vaxis");
+const vxfw = vaxis.vxfw;
+const log = std.log;
+
 pub fn main() !void {
     var hist_file_path: []const u8 = "/home/mediacom/.histfile";
     var args = std.process.args();
@@ -66,7 +73,7 @@ pub fn main() !void {
                 break;
             }
         }
-        const prompt = res[skip_reruns + 2..];  // Extracted command string
+        const prompt = res[(skip_reruns + 2)..];  // Extracted command string
         try std.io.getStdOut().writer().print("{s}\n", .{prompt});
     }
 }
@@ -96,11 +103,3 @@ pub fn myLogFn(
  const stderr = std.io.getStdErr().writer();
  nosuspend stderr.print(asTextUpper(level) ++ ": " ++ format ++ "\n", args) catch return;
 }
-
-
-const std = @import("std");
-const Ui = @import("Ui.zig");
-const History = @import("History.zig");
-const vaxis = @import("vaxis");
-const vxfw = vaxis.vxfw;
-const log = std.log;

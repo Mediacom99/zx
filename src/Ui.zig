@@ -1,3 +1,12 @@
+const std = @import("std");
+const log = std.log;
+const assert = std.debug.assert;
+const vaxis = @import("vaxis");
+const vxfw = vaxis.vxfw;
+const Self = @This();
+const Allocator = std.mem.Allocator;
+const History = @import("History.zig");
+
 text_field: vxfw.TextField,
 list_view: vxfw.ListView,
 text: vxfw.Text,
@@ -127,12 +136,3 @@ pub fn listViewWidgetBuilder(ptr: *const anyopaque, idx: usize, _: usize) ?vxfw.
 test {
     std.log.debug("Hello!", .{});
 }
-
-const std = @import("std");
-const log = std.log;
-const assert = std.debug.assert;
-const vaxis = @import("vaxis");
-const vxfw = vaxis.vxfw;
-const Self = @This();
-const Allocator = std.mem.Allocator;
-const History = @import("History.zig");

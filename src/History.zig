@@ -1,3 +1,13 @@
+const unicode = @import("./fuzzy/unicode.zig");
+const Map = std.StringHashMap(*List.Node);
+const List = std.DoublyLinkedList(Command);
+const Self = @This();
+const std = @import("std");
+const assert = std.debug.assert;
+const builtin = @import("builtin");
+const log = std.log;
+const Allocator = std.mem.Allocator;
+
 pub const Error = error {
     EmptyFile,
     FileTooBig_Max50MB,
@@ -149,13 +159,3 @@ test "historyParseFile with big file size" {
     try std.testing.expectEqual(history.list.len, history.map.count());
     std.log.debug("History.parseFile took: {e} seconds", .{nano_elapsed / (std.time.ns_per_s)});
 }
-
-const unicode = @import("./fuzzy/unicode.zig");
-const Map = std.StringHashMap(*List.Node);
-const List = std.DoublyLinkedList(Command);
-const Self = @This();
-const std = @import("std");
-const assert = std.debug.assert;
-const builtin = @import("builtin");
-const log = std.log;
-const Allocator = std.mem.Allocator;

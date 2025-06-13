@@ -1,3 +1,6 @@
+const std = @import("std");
+const log = std.log;
+
 pub const Error = error {
     FailedSanitization,
     EmptyByteSlice,
@@ -23,6 +26,3 @@ pub fn sanitizeUtf8UnmanagedStd(alloc: std.mem.Allocator, input: []const u8) ![]
     // log.debug("Output len: {d}", .{output.items.len});
     return try output.toOwnedSlice();
 }
-
-const std = @import("std");
-const log = std.log;

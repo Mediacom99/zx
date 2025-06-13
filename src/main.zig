@@ -1,46 +1,106 @@
-//! By convention, main.zig is where your main function lives in the case that
-//! you are building an executable. If you are making a library, the convention
-//! is to delete this file and start with root.zig instead.
-
 pub fn main() !void {
-    // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
-    std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
+    var hist_file_path: []const u8 = "/home/mediacom/.histfile";
+    var args = std.process.args();
+    _ = args.skip();
+    if (args.next()) |arg| {
+       hist_file_path = arg; 
+    } else {
+        log.info("No file path provided, using default: {s}", .{hist_file_path});
+    }
+    var gpa = std.heap.DebugAllocator(.{}).init;
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
 
-    // stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    const stdout_file = std.io.getStdOut().writer();
-    var bw = std.io.bufferedWriter(stdout_file);
-    const stdout = bw.writer();
+    var arena_allocator = std.heap.ArenaAllocator.init(allocator);
+    defer arena_allocator.deinit();
+    const arena = arena_allocator.allocator();
 
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
+    var history = History.init(allocator, arena);
+    defer history.deinit();
+    try history.parseFile(hist_file_path);
 
-    try bw.flush(); // Don't forget to flush!
-}
+    const ui = try allocator.create(Ui);
+    defer allocator.destroy(ui);
 
-test "simple test" {
-    var list = std.ArrayList(i32).init(std.testing.allocator);
-    defer list.deinit(); // Try commenting this out and see if zig detects the memory leak!
-    try list.append(42);
-    try std.testing.expectEqual(@as(i32, 42), list.pop());
-}
+    var app = try vxfw.App.init(allocator);
+    errdefer app.deinit();
 
-test "use other module" {
-    try std.testing.expectEqual(@as(i32, 150), lib.add(100, 50));
-}
-
-test "fuzz example" {
-    const Context = struct {
-        fn testOne(context: @This(), input: []const u8) anyerror!void {
-            _ = context;
-            // Try passing `--fuzz` to `zig build test` and see if it manages to fail this test case!
-            try std.testing.expect(!std.mem.eql(u8, "canyoufindme", input));
-        }
+    const Color = vaxis.Cell.Color;
+    const gruber_yellow: Color = .{ .rgb =  [_]u8{255, 221, 51} };
+    ui.history = history;
+    ui.arena = arena;
+    ui.list_items = std.ArrayList(vxfw.RichText).init(allocator);
+    ui.result = null;
+    ui.text = .{
+        .text = "Welcome to Zhist!",
+        .width_basis = .parent,
+        .text_align = .center,
+        .style = .{ .fg = gruber_yellow },
     };
-    try std.testing.fuzz(Context{}, Context.testOne, .{});
+    ui.text_field = .{
+        .buf = vxfw.TextField.Buffer.init(allocator),
+        .unicode = &app.vx.unicode,
+        .userdata = ui, 
+        .onChange = Ui.textFieldOnChange,
+        .onSubmit = Ui.textFieldOnSubmit,
+    };
+    ui.list_view = .{
+        .children = .{ 
+            .builder = .{
+                .userdata = ui,
+                .buildFn = Ui.listViewWidgetBuilder,
+            },   
+        },
+    };
+    defer ui.text_field.deinit();
+    defer ui.list_items.deinit();
+
+    try app.run(ui.widget(), .{.framerate = 60});
+    app.deinit();
+
+    if (ui.result) |res| {
+        var skip_reruns: usize = 0;
+        for (0..res.len) |i| {
+            if (res[i] == ']') {
+                skip_reruns = i;
+                break;
+            }
+        }
+        const prompt = res[skip_reruns + 2..];  // Extracted command string
+        try std.io.getStdOut().writer().print("{s}\n", .{prompt});
+    }
 }
+
+pub fn asTextUpper(comptime level: std.log.Level) []const u8 {
+    return switch (level) {
+        .err => "ERROR",
+        .warn => "WARN",
+        .info => "INFO",
+        .debug => "DEBUG",
+    };
+}
+
+pub const std_options: std.Options = .{
+    .log_level = std.log.default_level,
+    .logFn = myLogFn,
+};
+
+pub fn myLogFn(
+ comptime level: std.log.Level,
+ comptime _: @Type(.enum_literal),
+ comptime format: []const u8,
+ args: anytype,
+) void {
+ std.debug.lockStdErr();
+ defer std.debug.unlockStdErr();
+ const stderr = std.io.getStdErr().writer();
+ nosuspend stderr.print(asTextUpper(level) ++ ": " ++ format ++ "\n", args) catch return;
+}
+
 
 const std = @import("std");
-
-/// This imports the separate module containing `root.zig`. Take a look in `build.zig` for details.
-const lib = @import("histr_lib");
+const Ui = @import("Ui.zig");
+const History = @import("History.zig");
+const vaxis = @import("vaxis");
+const vxfw = vaxis.vxfw;
+const log = std.log;

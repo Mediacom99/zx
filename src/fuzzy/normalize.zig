@@ -481,7 +481,7 @@ const normalized_table = blk: {
 /// of the 400 most common unicode latin codepoints.
 /// Returns normalized run if there is a normalization
 /// otherwise returns the input.
-pub fn normalizeRune(rune: i32) i32 {
+pub inline fn normalizeRune(rune: i32) i32 {
     if (rune < 0 or rune < MIN_CODEPOINT or rune > MAX_CODEPOINT) return rune;
     const normalized_rune: u8 = normalized_table[@as(u21,@intCast(rune)) - MIN_CODEPOINT];
     if (normalized_rune == 0) return rune;

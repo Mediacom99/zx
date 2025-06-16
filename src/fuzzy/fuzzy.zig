@@ -1,10 +1,12 @@
 //! Zig implementation of fzf V1 and V2 fuzzy matching algorithms.
 //! https://github.com/junegunn/fzf
+
 const Chars = @import("Chars.zig");
 const expectEqual = std.testing.expectEqual;
 const log = std.log;
 const Slab = @import("slab").Slab;
 const std = @import("std");
+const normalize = @import("normalize.zig");
 
 /// Match result
 pub const Result = struct {
@@ -287,6 +289,7 @@ test "trySkip-case-sensitive" {
     fuzzyInit("default");
     const alloc = std.testing.allocator;
     const input = try Chars.initFromByteSlice(alloc, "foobar");
+
     // Should find 'b' at position 3
     try std.testing.expectEqual(3, trySkip(input, true, 'b', 0));
 

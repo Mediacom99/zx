@@ -3,10 +3,13 @@ Lightning-fast, cross-platform terminal tools written in Zig. One toolkit, endle
 
 ## What is zx ?
 zx reimagines essential terminal utilities through the lens of modern performance. 
+
 Starting with a blazing-fast shell history search, zx is evolving into a comprehensive toolkit that 
 brings the speed of native code to everyday terminal tasks.
+
 Why another terminal tool? Because we believe developers shouldn't have to choose 
-between speed and features. 
+between speed and features.
+
 Written in Zig, zx delivers both—with sub-millisecond response times and a thoughtful 
 interface that respects your workflow.
 

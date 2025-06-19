@@ -24,12 +24,13 @@ pub fn main() !void {
         hist_filepath = arg;
     } else {
         log.info("No file path provided, looking for .histfile in `HOME` folder", .{});
-        const home = std.process.getEnvVarOwned(allocator, "HOME") catch |e| {
-            if (e == error.EnvironmentVariableNotFound) {
-                log.err("environment variable `HOME` not found", .{});
-            }
-            return e;
-        };
+        const home =
+            std.process.getEnvVarOwned(allocator, "HOME") catch |e| {
+                if (e == error.EnvironmentVariableNotFound) {
+                    log.err("environment variable `HOME` not found", .{});
+                }
+                return e;
+            };
         defer allocator.free(home);
         hist_filepath = try std.fmt.allocPrint(allocator, "{s}/.histfile", .{home});
         from_env = true;
@@ -94,7 +95,8 @@ pub fn main() !void {
                 break;
             }
         }
-        const prompt = res[(skip_reruns + 2)..]; // Extracted command string
+        // Extracted command string
+        const prompt = res[(skip_reruns + 2)..];
         try std.io.getStdOut().writer().print("{s}\n", .{prompt});
     }
 }

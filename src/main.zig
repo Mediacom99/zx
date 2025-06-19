@@ -3,20 +3,41 @@ const Ui = @import("Ui.zig");
 const History = @import("History.zig");
 const vaxis = @import("vaxis");
 const vxfw = vaxis.vxfw;
+
+const customLogger = @import("log.zig").customLogger;
 const log = std.log;
+pub const std_options: std.Options = .{
+    .log_level = std.log.default_level,
+    .logFn = customLogger,
+};
 
 pub fn main() !void {
-    var hist_file_path: []const u8 = "/home/mediacom/.histfile";
-    var args = std.process.args();
-    _ = args.skip();
-    if (args.next()) |arg| {
-       hist_file_path = arg; 
-    } else {
-        log.info("No file path provided, using default: {s}", .{hist_file_path});
-    }
     var gpa = std.heap.DebugAllocator(.{}).init;
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
+    var from_env: bool = false;
+
+    var args = std.process.args();
+    var hist_filepath: []const u8 = undefined;
+    _ = args.skip();
+    if (args.next()) |arg| {
+       hist_filepath = arg; 
+    } else {
+        log.info("No file path provided, looking for .histfile in `HOME` folder", .{});
+        const home = std.process.getEnvVarOwned(allocator, "HOME") catch |e| {
+            if (e == error.EnvironmentVariableNotFound) {
+                log.err("environment variable `HOME` not found", .{});
+            }
+            return e;
+        };
+        defer allocator.free(home);
+        hist_filepath = try std.fmt.allocPrint(allocator, "{s}/.histfile", .{home});
+        from_env = true;
+        log.debug("Histfile path found: {s}", .{hist_filepath});
+    }
+    defer {
+        if(from_env) allocator.free(hist_filepath);
+    }
 
     var arena_allocator = std.heap.ArenaAllocator.init(allocator);
     defer arena_allocator.deinit();
@@ -24,7 +45,7 @@ pub fn main() !void {
 
     var history = History.init(allocator, arena);
     defer history.deinit();
-    try history.parseFile(hist_file_path);
+    try history.parseFile(hist_filepath);
 
     const ui = try allocator.create(Ui);
     defer allocator.destroy(ui);
@@ -76,30 +97,4 @@ pub fn main() !void {
         const prompt = res[(skip_reruns + 2)..];  // Extracted command string
         try std.io.getStdOut().writer().print("{s}\n", .{prompt});
     }
-}
-
-pub fn asTextUpper(comptime level: std.log.Level) []const u8 {
-    return switch (level) {
-        .err => "ERROR",
-        .warn => "WARN",
-        .info => "INFO",
-        .debug => "DEBUG",
-    };
-}
-
-pub const std_options: std.Options = .{
-    .log_level = std.log.default_level,
-    .logFn = myLogFn,
-};
-
-pub fn myLogFn(
- comptime level: std.log.Level,
- comptime _: @Type(.enum_literal),
- comptime format: []const u8,
- args: anytype,
-) void {
- std.debug.lockStdErr();
- defer std.debug.unlockStdErr();
- const stderr = std.io.getStdErr().writer();
- nosuspend stderr.print(asTextUpper(level) ++ ": " ++ format ++ "\n", args) catch return;
 }

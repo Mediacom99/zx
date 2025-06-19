@@ -87,12 +87,13 @@ pub fn parseFile(self: *Self, path: []const u8) !void {
     // to add utf8 replacement char. We could allocate 3 bytes per not ascii char
     // for more memory consumption but faster execution.
     const valid_content = try unicode.sanitizeUtf8UnmanagedStd(self.gpa, content);
+    defer self.gpa.free(valid_content);
+
     if (builtin.target.os.tag == .linux) {
         std.posix.munmap(@alignCast(content));
     } else {
        self.gpa.free(content);
     }
-    defer self.gpa.free(valid_content);
 
     var iter = std.mem.splitScalar(u8, valid_content, '\n');
     while(iter.next()) |cmd| {

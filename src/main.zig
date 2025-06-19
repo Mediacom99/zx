@@ -21,7 +21,7 @@ pub fn main() !void {
     var hist_filepath: []const u8 = undefined;
     _ = args.skip();
     if (args.next()) |arg| {
-       hist_filepath = arg; 
+        hist_filepath = arg;
     } else {
         log.info("No file path provided, looking for .histfile in `HOME` folder", .{});
         const home = std.process.getEnvVarOwned(allocator, "HOME") catch |e| {
@@ -36,7 +36,7 @@ pub fn main() !void {
         log.debug("Histfile path found: {s}", .{hist_filepath});
     }
     defer {
-        if(from_env) allocator.free(hist_filepath);
+        if (from_env) allocator.free(hist_filepath);
     }
 
     var arena_allocator = std.heap.ArenaAllocator.init(allocator);
@@ -54,7 +54,7 @@ pub fn main() !void {
     errdefer app.deinit();
 
     const Color = vaxis.Cell.Color;
-    const gruber_yellow: Color = .{ .rgb =  [_]u8{255, 221, 51} };
+    const gruber_yellow: Color = .{ .rgb = [_]u8{ 255, 221, 51 } };
     ui.history = history;
     ui.arena = arena;
     ui.list_items = std.ArrayList(vxfw.RichText).init(allocator);
@@ -68,22 +68,22 @@ pub fn main() !void {
     ui.text_field = .{
         .buf = vxfw.TextField.Buffer.init(allocator),
         .unicode = &app.vx.unicode,
-        .userdata = ui, 
+        .userdata = ui,
         .onChange = Ui.textFieldOnChange,
         .onSubmit = Ui.textFieldOnSubmit,
     };
     ui.list_view = .{
-        .children = .{ 
+        .children = .{
             .builder = .{
                 .userdata = ui,
                 .buildFn = Ui.listViewWidgetBuilder,
-            },   
+            },
         },
     };
     defer ui.text_field.deinit();
     defer ui.list_items.deinit();
 
-    try app.run(ui.widget(), .{.framerate = 60});
+    try app.run(ui.widget(), .{ .framerate = 60 });
     app.deinit();
 
     if (ui.result) |res| {
@@ -94,7 +94,7 @@ pub fn main() !void {
                 break;
             }
         }
-        const prompt = res[(skip_reruns + 2)..];  // Extracted command string
+        const prompt = res[(skip_reruns + 2)..]; // Extracted command string
         try std.io.getStdOut().writer().print("{s}\n", .{prompt});
     }
 }

@@ -2,7 +2,7 @@ const Self = @This();
 const std = @import("std");
 const unicode = @import("unicode.zig");
 
-/// In case of utf8-encoded unicode input this slice is the u8 
+/// In case of utf8-encoded unicode input this slice is the u8
 /// view of an original i32 slice containing all the input's codepoints.
 /// If input is only ascii this slice contains each character directly as u8.
 slice: []const u8,
@@ -18,7 +18,6 @@ trim_len: u16 = 0,
 // minimize the memory footprint by not wasting padded spaces.
 index: u32 = 0,
 
-
 const overflow64: u64 = 0x8080808080808080;
 const overflow32: u32 = 0x80808080;
 /// Very fast ascii check. Returns whether ascii or not and
@@ -30,7 +29,7 @@ fn isAsciiOptimized(bytes: []const u8) struct { bool, usize } {
 
     //Loop over 8 byte chunk
     while (i + 8 <= len) {
-        const eight_bytes = @as(*const [8]u8, @ptrCast(bytes[i..i+8].ptr));
+        const eight_bytes = @as(*const [8]u8, @ptrCast(bytes[i .. i + 8].ptr));
         const chunk: u64 = std.mem.readInt(u64, eight_bytes, .little);
         //If not zero it means at least 1 out of 8 bytes is not ascii
         if ((overflow64 & chunk) != 0) {
@@ -41,7 +40,7 @@ fn isAsciiOptimized(bytes: []const u8) struct { bool, usize } {
 
     //Loop over remaining 4 bytes chunk
     while (i + 4 <= len) {
-        const four_bytes = @as(*const [4]u8, @ptrCast(bytes[i..i+4].ptr));
+        const four_bytes = @as(*const [4]u8, @ptrCast(bytes[i .. i + 4].ptr));
         const chunk = std.mem.readInt(u32, four_bytes, .little);
         //If not zero it means at least 1 out of 4 bytes is not ascii
         if ((overflow32 & chunk) != 0) {
@@ -83,8 +82,8 @@ pub fn initFromByteSlice(alloc: std.mem.Allocator, bytes: []const u8) !Self {
 
     // bytes is assumed to be valid utf8 so we can iterate over codepoints
     // FIXME that bytes slice IS WRONG
-    var utf8_iter = std.unicode.Utf8Iterator{.bytes = bytes[ascii_until..], .i = 0};
-    while(utf8_iter.nextCodepoint()) |codepoint| {
+    var utf8_iter = std.unicode.Utf8Iterator{ .bytes = bytes[ascii_until..], .i = 0 };
+    while (utf8_iter.nextCodepoint()) |codepoint| {
         try runes.append(@intCast(codepoint));
     }
 
@@ -102,8 +101,8 @@ pub fn initFromByteSlice(alloc: std.mem.Allocator, bytes: []const u8) !Self {
 
 /// Detects if input is unicode and only in that case
 /// it frees the internal slice. For ascii input
-/// no other allocation was done by Chars because each 
-/// original byte was enough to store the input, so 
+/// no other allocation was done by Chars because each
+/// original byte was enough to store the input, so
 /// there is nothing to free.
 pub fn deinit(self: *Self, alloc: std.mem.Allocator) void {
     if (!self.is_ascii) {
@@ -124,7 +123,7 @@ pub fn optional_runes(self: Self) ?[]const i32 {
     return runes_ptr[0..runes_len];
 }
 
-/// Returns number of runes for unicode 
+/// Returns number of runes for unicode
 /// input or length of internal slice for
 /// ascii input.
 pub fn length(self: Self) usize {
@@ -133,8 +132,6 @@ pub fn length(self: Self) usize {
     }
     return self.slice.len;
 }
-
-
 
 test "fromBytes ascii-only input" {
     const allocator = std.testing.allocator;
@@ -145,10 +142,9 @@ test "fromBytes ascii-only input" {
     try std.testing.expectEqual(chars.length(), 15);
 }
 
-
 test "fromBytes comprehensive Unicode string" {
     const alloc = std.testing.allocator;
-    const test_unicode = 
+    const test_unicode =
         // ASCII start (46 bytes)
         "The quick brown fox jumps over the lazy dog! " ++
         // Latin extended (35 bytes - includes multi-byte chars)
@@ -177,13 +173,13 @@ test "fromBytes comprehensive Unicode string" {
     defer chars.deinit(alloc);
     try std.testing.expect(!chars.is_ascii);
     const runes = chars.optional_runes() orelse unreachable;
-    
+
     // Check ASCII part
     try std.testing.expectEqual('T', runes[0]);
     try std.testing.expectEqual('h', runes[1]);
     try std.testing.expectEqual('e', runes[2]);
     try std.testing.expectEqual(' ', runes[3]);
-    
+
     // Find where non-ASCII starts - should be at "Café"
     // The 'é' in Café is at position 49 (after the first sentence + "Caf")
     var ascii_end: usize = 0;
@@ -209,7 +205,7 @@ test "fromBytes comprehensive Unicode string" {
 
     // Check Greek word "Ελληνικά"
     if (greek_start) |start| {
-        try std.testing.expectEqual(@as(i32, 0x0395), runes[start]);     // Ε
+        try std.testing.expectEqual(@as(i32, 0x0395), runes[start]); // Ε
         try std.testing.expectEqual(@as(i32, 0x03BB), runes[start + 1]); // λ
         try std.testing.expectEqual(@as(i32, 0x03BB), runes[start + 2]); // λ
         try std.testing.expectEqual(@as(i32, 0x03B7), runes[start + 3]); // η
@@ -229,10 +225,10 @@ test "fromBytes comprehensive Unicode string" {
     }
     try std.testing.expect(chinese_start != null);
     if (chinese_start) |start| {
-        try std.testing.expectEqual(0x4E2D, runes[start]);     // 中
+        try std.testing.expectEqual(0x4E2D, runes[start]); // 中
         try std.testing.expectEqual(0x6587, runes[start + 1]); // 文
     }
-    
+
     // Find first emoji
     var emoji_start: ?usize = null;
     for (0..runes.len) |i| {
@@ -243,11 +239,11 @@ test "fromBytes comprehensive Unicode string" {
     }
     try std.testing.expect(emoji_start != null);
     if (emoji_start) |start| {
-        try std.testing.expectEqual(0x1F600, runes[start]);     // 😀
+        try std.testing.expectEqual(0x1F600, runes[start]); // 😀
         try std.testing.expectEqual(0x1F603, runes[start + 1]); // 😃
         try std.testing.expectEqual(0x1F604, runes[start + 2]); // 😄
     }
-    
+
     // Check that END is at the end
     const len = runes.len;
     try std.testing.expectEqual('E', runes[len - 3]);

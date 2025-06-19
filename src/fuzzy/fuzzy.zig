@@ -248,7 +248,7 @@ fn asciiFuzzyIndex(input: Chars, pattern: []const i32, case_sensitive: bool) str
     return .{ first_idx, last_idx + 1 };
 }
 
-// fn fuzzyMatchV1(case_sensitive: bool, _: bool, _: bool, text: Chars, pattern: []i32, _: bool, 
+// fn fuzzyMatchV1(case_sensitive: bool, _: bool, _: bool, text: Chars, pattern: []i32, _: bool,
 //                 _: Slab) struct { Result, ?[]i32 } {
 //     if (pattern.len == 0) {
 //         return .{ Result{ .start = 0, .end = 0, .score = 0 }, null };

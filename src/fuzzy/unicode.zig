@@ -1,7 +1,7 @@
 const std = @import("std");
 const log = std.log;
 
-pub const Error = error {
+pub const Error = error{
     FailedSanitization,
     EmptyByteSlice,
     InvalidUtf8,
@@ -9,7 +9,7 @@ pub const Error = error {
 
 //TODO: add support for graphemes cluster:whatwg
 
-/// Formats an array of bytes into valid utf8 by replacing 
+/// Formats an array of bytes into valid utf8 by replacing
 /// every invalid utf8 sequence using the
 /// replacement codepoint 0xFFFD following unicode's 'Substitution of Maximal Subparts', thus
 /// it consumes only the bytes for the longest invalid sequence.

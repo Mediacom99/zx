@@ -23,10 +23,9 @@ pub fn widget(self: *Self) vxfw.Widget {
     };
 }
 
-fn typeErasedEventHandler(ptr: *anyopaque, ctx: *vxfw.EventContext,
-event: vxfw.Event) anyerror!void {
+fn typeErasedEventHandler(ptr: *anyopaque, ctx: *vxfw.EventContext, event: vxfw.Event) anyerror!void {
     const self: *Self = @ptrCast(@alignCast(ptr));
-    switch(event) {
+    switch (event) {
         .init => {
             //Text field
             try self.text_field.insertSliceAtCursor("> ");
@@ -36,19 +35,10 @@ event: vxfw.Event) anyerror!void {
             log.debug("Commands: {d}", .{self.history.list.len});
             while (temp) |node| {
                 var spans = std.ArrayList(vxfw.RichText.TextSpan).init(self.arena);
-                const text = try std.fmt.allocPrint(self.arena, 
-                                    "[{d}] {s}", 
-                                    .{node.data.reruns, node.data.cmd}
-                                );
-                const text_span: vxfw.RichText.TextSpan = .{
-                    .text = text,
-                    .style = .{.bold = false}
-                };
+                const text = try std.fmt.allocPrint(self.arena, "[{d}] {s}", .{ node.data.reruns, node.data.cmd });
+                const text_span: vxfw.RichText.TextSpan = .{ .text = text, .style = .{ .bold = false } };
                 try spans.append(text_span);
-                const rich_text: vxfw.RichText = .{
-                    .text = spans.items, 
-                    .text_align = .left
-                };
+                const rich_text: vxfw.RichText = .{ .text = spans.items, .text_align = .left };
                 try self.list_items.append(rich_text);
                 temp = node.prev;
             }
@@ -82,19 +72,21 @@ fn typeErasedDrawFn(ptr: *anyopaque, ctx: vxfw.DrawContext) Allocator.Error!vxfw
     const self: *Self = @ptrCast(@alignCast(ptr));
     const max = ctx.max.size();
     const text: vxfw.SubSurface = .{
-        .origin = .{ .row = 1, .col = 0},
-        .surface = try self.text.draw(ctx.withConstraints(ctx.min, .{ .width = max.width, .height = 1})),
+        .origin = .{ .row = 1, .col = 0 },
+        .surface = try self.text.draw(ctx.withConstraints(ctx.min, .{ .width = max.width, .height = 1 })),
     };
     const text_field: vxfw.SubSurface = .{
-        .origin = .{ .row = max.height - 2, .col = 2},
+        .origin = .{ .row = max.height - 2, .col = 2 },
         .surface = try self.text_field.draw(ctx.withConstraints(
-            ctx.min, .{ .width = 100, .height = 1},
+            ctx.min,
+            .{ .width = 100, .height = 1 },
         )),
     };
     const list_view: vxfw.SubSurface = .{
-        .origin = .{ .row = 3, .col = 2 }, 
+        .origin = .{ .row = 3, .col = 2 },
         .surface = try self.list_view.draw(ctx.withConstraints(
-            ctx.min, .{ .width = ctx.max.width, .height = max.height - 6},
+            ctx.min,
+            .{ .width = ctx.max.width, .height = max.height - 6 },
         )),
     };
     const children = try ctx.arena.alloc(vxfw.SubSurface, 3);
@@ -105,16 +97,16 @@ fn typeErasedDrawFn(ptr: *anyopaque, ctx: vxfw.DrawContext) Allocator.Error!vxfw
         .size = max,
         .widget = self.widget(),
         .buffer = &.{},
-        .children = children, 
+        .children = children,
     };
 }
 
 //THIS TWO FUNCTIONS SHOULD NOT BE HERE, THEY BELONG TO PROMPT / TEXT_FIELD
 pub fn textFieldOnChange(_: ?*anyopaque, _: *vxfw.EventContext, _: []const u8) anyerror!void {
-        // const ptr = maybe_ptr orelse return;
-        // const self: *Self = @ptrCast(@alignCast(ptr));
-        // try self.text_fieldcinsertSliceAtCursor("You typed something!");
-        return;
+    // const ptr = maybe_ptr orelse return;
+    // const self: *Self = @ptrCast(@alignCast(ptr));
+    // try self.text_fieldcinsertSliceAtCursor("You typed something!");
+    return;
 }
 pub fn textFieldOnSubmit(maybe_ptr: ?*anyopaque, event_ctx: *vxfw.EventContext, _: []const u8) anyerror!void {
     const ptr = maybe_ptr orelse return;

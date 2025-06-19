@@ -8,92 +8,91 @@ pub fn main() !void {
     defer _ = dba.deinit();
     const alloc = dba.allocator();
 
-    const raw_input = 
-    // ASCII start
-    "The quick brown fox jumps over the lazy dog! " ++
+    const raw_input =
+        // ASCII start
+        "The quick brown fox jumps over the lazy dog! " ++
 
-    // Latin extended
-    "Café, naïve, résumé, Zürich, señor, " ++
+        // Latin extended
+        "Café, naïve, résumé, Zürich, señor, " ++
 
-    // Greek
-    "Ελληνικά (Greek): Αλφάβητο, " ++
+        // Greek
+        "Ελληνικά (Greek): Αλφάβητο, " ++
 
-    // Cyrillic
-    "Русский язык (Russian): Привет мир! " ++
+        // Cyrillic
+        "Русский язык (Russian): Привет мир! " ++
 
-    // Chinese
-    "中文 (Chinese): 你好世界！春夏秋冬，" ++
+        // Chinese
+        "中文 (Chinese): 你好世界！春夏秋冬，" ++
 
-    // Japanese (Hiragana, Katakana, Kanji)
-    "日本語: ひらがな、カタカナ、漢字、" ++
+        // Japanese (Hiragana, Katakana, Kanji)
+        "日本語: ひらがな、カタカナ、漢字、" ++
 
-    // Korean
-    "한국어 (Korean): 안녕하세요! " ++
+        // Korean
+        "한국어 (Korean): 안녕하세요! " ++
 
-    // Arabic (RTL)
-    "العربية: مرحبا بالعالم! " ++
+        // Arabic (RTL)
+        "العربية: مرحبا بالعالم! " ++
 
-    // Hebrew (RTL)
-    "עברית: שלום עולם! " ++
+        // Hebrew (RTL)
+        "עברית: שלום עולם! " ++
 
-    // Thai
-    "ภาษาไทย: สวัสดีครับ " ++
+        // Thai
+        "ภาษาไทย: สวัสดีครับ " ++
 
-    // Emojis (various byte lengths)
-    "Emojis: 😀😃😄😁🤣😂😊😇🙂🙃😉😌 " ++
+        // Emojis (various byte lengths)
+        "Emojis: 😀😃😄😁🤣😂😊😇🙂🙃😉😌 " ++
 
-    // Flags (special emoji sequences)
-    "Flags: 🇺🇸🇬🇧🇯🇵🇩🇪🇫🇷🇰🇷 " ++
+        // Flags (special emoji sequences)
+        "Flags: 🇺🇸🇬🇧🇯🇵🇩🇪🇫🇷🇰🇷 " ++
 
-    // Complex emojis (with modifiers)
-    "Complex: 👨‍👩‍👧‍👦👨‍💻👩‍🔬🧑‍🚀 " ++
+        // Complex emojis (with modifiers)
+        "Complex: 👨‍👩‍👧‍👦👨‍💻👩‍🔬🧑‍🚀 " ++
 
-    // Mathematical symbols
-    "Math: ∑∏∫∂∇∆√∞≈≠≤≥±∓×÷ " ++
+        // Mathematical symbols
+        "Math: ∑∏∫∂∇∆√∞≈≠≤≥±∓×÷ " ++
 
-    // Currency symbols
-    "Currency: $€£¥₹₽₩₪ " ++
+        // Currency symbols
+        "Currency: $€£¥₹₽₩₪ " ++
 
-    // Box drawing
-    "Box: ┌─┬─┐│ │ ││ │ │└─┴─┘ " ++
+        // Box drawing
+        "Box: ┌─┬─┐│ │ ││ │ │└─┴─┘ " ++
 
-    // Arrows
-    "Arrows: ←↑→↓↔↕⇐⇒⇔⇕ " ++
+        // Arrows
+        "Arrows: ←↑→↓↔↕⇐⇒⇔⇕ " ++
 
-    // Musical symbols
-    "Music: ♩♪♫♬♭♮♯ " ++
+        // Musical symbols
+        "Music: ♩♪♫♬♭♮♯ " ++
 
-    // Miscellaneous symbols
-    "Misc: ©®™℗№℮¶§†‡※‼⁇ " ++
+        // Miscellaneous symbols
+        "Misc: ©®™℗№℮¶§†‡※‼⁇ " ++
 
-    // Combining characters
-    "Combining: a\u{0301}e\u{0301}i\u{0301}o\u{0301}u\u{0301} " ++ // áéíóú using combining acute
+        // Combining characters
+        "Combining: a\u{0301}e\u{0301}i\u{0301}o\u{0301}u\u{0301} " ++ // áéíóú using combining acute
 
-    // Zero-width characters
-    "Zero-width: a\u{200B}b\u{200C}c\u{200D}d " ++ // Various zero-width chars
+        // Zero-width characters
+        "Zero-width: a\u{200B}b\u{200C}c\u{200D}d " ++ // Various zero-width chars
 
-    // Replacement character
-    "Replacement: \u{FFFD} " ++
+        // Replacement character
+        "Replacement: \u{FFFD} " ++
 
-    // Various quote marks
-    "Quotes: \"Hello\" 'World' «Bonjour» „Guten Tag\""  ++
+        // Various quote marks
+        "Quotes: \"Hello\" 'World' «Bonjour» „Guten Tag\"" ++
 
-    // Ligatures
-    "Ligatures: ﬁ ﬂ ﬀ ﬃ ﬄ " ++
+        // Ligatures
+        "Ligatures: ﬁ ﬂ ﬀ ﬃ ﬄ " ++
 
-    // Superscript/Subscript
-    "Super/Sub: x² y³ H₂O CO₂ " ++
+        // Superscript/Subscript
+        "Super/Sub: x² y³ H₂O CO₂ " ++
 
-    // Fractions
-    "Fractions: ½ ⅓ ¼ ⅕ ⅙ ⅐ ⅛ ⅑ ⅒ " ++
+        // Fractions
+        "Fractions: ½ ⅓ ¼ ⅕ ⅙ ⅐ ⅛ ⅑ ⅒ " ++
 
-    // Roman numerals
-    "Roman: Ⅰ Ⅱ Ⅲ Ⅳ Ⅴ Ⅵ Ⅶ Ⅷ Ⅸ Ⅹ " ++
+        // Roman numerals
+        "Roman: Ⅰ Ⅱ Ⅲ Ⅳ Ⅴ Ⅵ Ⅶ Ⅷ Ⅸ Ⅹ " ++
+        "♍ ⡆⨕ﺥ𐀉" ++
 
-    "♍ ⡆⨕ﺥ𐀉" ++
-
-    // End with ASCII
-    "END OF TEST STRING!";
+        // End with ASCII
+        "END OF TEST STRING!";
 
     const input = try unicode.sanitizeUtf8UnmanagedStd(alloc, raw_input);
     defer alloc.free(input);

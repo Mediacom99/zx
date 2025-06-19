@@ -3,7 +3,6 @@ const MIN_CODEPOINT: u21 = 0x00C0;
 const MAX_CODEPOINT: u21 = 0x2184;
 const TABLE_SIZE = (MAX_CODEPOINT - MIN_CODEPOINT) + 1;
 
-
 /// FIXME: kinda sucks, for 400 u21 we are wasting
 /// around 22.5 KB and having around 7300 u21 set to zero and never used.
 const normalized_table = blk: {
@@ -13,7 +12,7 @@ const normalized_table = blk: {
             t[from - MIN_CODEPOINT] = to;
         }
     }.set;
-    set(&table, @as(u21,0x00E1), 'a'); //  WITH ACUTE, LATIN SMALL LETTER
+    set(&table, @as(u21, 0x00E1), 'a'); //  WITH ACUTE, LATIN SMALL LETTER
     set(&table, 0x0103, 'a'); //  WITH BREVE, LATIN SMALL LETTER
     set(&table, 0x01CE, 'a'); //  WITH CARON, LATIN SMALL LETTER
     set(&table, 0x00E2, 'a'); //  WITH CIRCUMFLEX, LATIN SMALL LETTER
@@ -483,7 +482,7 @@ const normalized_table = blk: {
 /// otherwise returns the input.
 pub inline fn normalizeRune(rune: i32) i32 {
     if (rune < 0 or rune < MIN_CODEPOINT or rune > MAX_CODEPOINT) return rune;
-    const normalized_rune: u8 = normalized_table[@as(u21,@intCast(rune)) - MIN_CODEPOINT];
+    const normalized_rune: u8 = normalized_table[@as(u21, @intCast(rune)) - MIN_CODEPOINT];
     if (normalized_rune == 0) return rune;
     return @intCast(normalized_rune);
 }
@@ -492,10 +491,10 @@ pub inline fn normalizeRune(rune: i32) i32 {
 test "Normalization table and normalizeRune" {
     var zeroes: usize = 0;
     for (normalized_table) |b| {
-        if (b == 0) zeroes+=1;
+        if (b == 0) zeroes += 1;
     }
     try std.testing.expectEqual(7928, zeroes);
-    try std.testing.expectEqual(461, TABLE_SIZE - zeroes); 
+    try std.testing.expectEqual(461, TABLE_SIZE - zeroes);
     try std.testing.expectEqual(TABLE_SIZE, normalized_table.len);
     try std.testing.expectEqual('A', normalizeRune('A'));
     try std.testing.expectEqual('e', normalizeRune('ế'));

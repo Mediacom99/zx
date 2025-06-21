@@ -478,7 +478,7 @@ const normalized_table = blk: {
 
 /// Normalizes rune based on custom fzf lookup table
 /// of the 400 most common unicode latin codepoints.
-/// Returns normalized run if there is a normalization
+/// Returns normalized rune if there is a normalization
 /// otherwise returns the input.
 pub inline fn normalizeRune(rune: i32) i32 {
     if (rune < 0 or rune < MIN_CODEPOINT or rune > MAX_CODEPOINT) return rune;

@@ -99,41 +99,7 @@ pub fn initFromByteSlice(alloc: std.mem.Allocator, bytes: []const u8) !Self {
     };
 }
 
-/// Detects if input is unicode and only in that case
-/// it frees the internal slice. For ascii input
-/// no other allocation was done by Chars because each
-/// original byte was enough to store the input, so
-/// there is nothing to free.
-pub fn deinit(self: *Self, alloc: std.mem.Allocator) void {
-    if (!self.is_ascii) {
-        if (self.optional_runes()) |runes| {
-            alloc.free(@constCast(runes));
-        }
-    }
-}
-
-/// Casts back from u8 to original rune slice (i32).
-/// Returns null if internal slice is ascii only.
-pub fn optional_runes(self: Self) ?[]const i32 {
-    if (self.is_ascii) {
-        return null;
-    }
-    const runes_ptr: [*]const i32 = @alignCast(@ptrCast(self.slice.ptr));
-    const runes_len = self.slice.len / @sizeOf(i32);
-    return runes_ptr[0..runes_len];
-}
-
-/// Returns number of runes for unicode
-/// input or length of internal slice for
-/// ascii input.
-pub fn length(self: Self) usize {
-    if (self.optional_runes()) |runes| {
-        return runes.len;
-    }
-    return self.slice.len;
-}
-
-test "fromBytes ascii-only input" {
+test "initFromByteSlice ascii-only input" {
     const allocator = std.testing.allocator;
     var chars = try Self.initFromByteSlice(allocator, "Hello World!\n\t\r");
     defer chars.deinit(allocator);
@@ -142,7 +108,7 @@ test "fromBytes ascii-only input" {
     try std.testing.expectEqual(chars.length(), 15);
 }
 
-test "fromBytes comprehensive Unicode string" {
+test "initFromByteSlice comprehensive Unicode string" {
     const alloc = std.testing.allocator;
     const test_unicode =
         // ASCII start (46 bytes)
@@ -249,4 +215,70 @@ test "fromBytes comprehensive Unicode string" {
     try std.testing.expectEqual('E', runes[len - 3]);
     try std.testing.expectEqual('N', runes[len - 2]);
     try std.testing.expectEqual('D', runes[len - 1]);
+}
+
+/// Detects if input is unicode and only in that case
+/// it frees the internal slice. For ascii input
+/// no other allocation was done by Chars because each
+/// original byte was enough to store the input, so
+/// there is nothing to free.
+pub fn deinit(self: *Self, alloc: std.mem.Allocator) void {
+    if (!self.is_ascii) {
+        if (self.optional_runes()) |runes| {
+            alloc.free(@constCast(runes));
+        }
+    }
+}
+
+/// Casts back from u8 to original rune slice (i32).
+/// Returns null if internal slice is ascii only.
+pub fn optional_runes(self: Self) ?[]const i32 {
+    if (self.is_ascii) {
+        return null;
+    }
+    const runes_ptr: [*]const i32 = @alignCast(@ptrCast(self.slice.ptr));
+    const runes_len = self.slice.len / @sizeOf(i32);
+    return runes_ptr[0..runes_len];
+}
+
+test "optional_runes with unicode input" {
+    const allocator = std.testing.allocator;
+    var chars = try Self.initFromByteSlice(
+        allocator,
+        "😀🤣😊",
+    );
+    defer chars.deinit(allocator);
+    try std.testing.expectEqualDeep(
+        chars.optional_runes(),
+        &[_]i32{
+            '😀', '🤣', '😊',
+        },
+    );
+}
+
+/// Returns number of runes for unicode
+/// input or length of internal slice for
+/// ascii input.
+pub fn length(self: Self) usize {
+    if (self.optional_runes()) |runes| {
+        return runes.len;
+    }
+    return self.slice.len;
+}
+
+pub fn get(self: Self, index: usize) i32 {
+    if (self.optional_runes()) |runes| {
+        return runes[index];
+    }
+    return self.slice[index];
+}
+
+test "chars get rune at index and length of input" {
+    const allocator = std.testing.allocator;
+    var chars = try Self.initFromByteSlice(allocator, "Hello 🤣");
+    defer chars.deinit(allocator);
+    try std.testing.expectEqual(chars.length(), 7);
+    try std.testing.expectEqual(chars.get(0), 'H');
+    try std.testing.expectEqual(chars.get(1), 'e');
+    try std.testing.expectEqual(chars.get(6), '🤣');
 }

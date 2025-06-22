@@ -9,15 +9,6 @@ slice: []const u8,
 
 is_ascii: bool,
 
-trim_len_known: bool = false,
-
-trim_len: u16 = 0,
-
-//TODO: UNDERSTAND THIS
-// XXX Piggybacking item index here is a horrible idea. But I'm trying to
-// minimize the memory footprint by not wasting padded spaces.
-index: u32 = 0,
-
 const overflow64: u64 = 0x8080808080808080;
 const overflow32: u32 = 0x80808080;
 /// Very fast ascii check. Returns whether ascii or not and
@@ -60,9 +51,8 @@ fn isAsciiOptimized(bytes: []const u8) struct { bool, usize } {
 }
 
 /// Wraps byte slice into Chars: if input is only ascii the original slice is used.
-/// If input is not only ascii then every unicode codepoint is stored as i32 type
-/// called Rune.
-/// Chars always contains a []u8 view of the original []i32 slice;
+/// If input is not only ascii then every unicode codepoint is stored as i32.
+/// Chars always contains a []u8 view of the original []i32 slice in case of unicode.
 /// Input is assumed to be valid utf-8 with replacement chars if needed.
 /// Always call deinit in order to free owned runes in case of unicode input.
 pub fn initFromByteSlice(alloc: std.mem.Allocator, bytes: []const u8) !Self {
@@ -77,20 +67,19 @@ pub fn initFromByteSlice(alloc: std.mem.Allocator, bytes: []const u8) !Self {
 
     for (0..ascii_until) |i| {
         //Cast ascii byte as i32
-        try runes.append(@as(i32, @intCast(bytes[i])));
+        try runes.append(bytes[i]);
     }
 
     // bytes is assumed to be valid utf8 so we can iterate over codepoints
-    // FIXME that bytes slice IS WRONG
     var utf8_iter = std.unicode.Utf8Iterator{ .bytes = bytes[ascii_until..], .i = 0 };
     while (utf8_iter.nextCodepoint()) |codepoint| {
-        try runes.append(@intCast(codepoint));
+        try runes.append(codepoint);
     }
 
     const runes_owned: []i32 = try runes.toOwnedSlice();
 
-    //This is smart. (All credits goes to fzf).
-    //Cast owned runes slice as u8 slice
+    // This is smart. (All credits goes to fzf).
+    // Cast owned runes slice as u8 slice
     const bytes_ptr: [*]u8 = @alignCast(@ptrCast(runes_owned.ptr));
     const bytes_len: usize = runes_owned.len * @sizeOf(i32);
     return .{

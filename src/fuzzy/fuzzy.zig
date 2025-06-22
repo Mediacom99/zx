@@ -7,6 +7,7 @@ const log = std.log;
 const Slab = @import("slab").Slab;
 const std = @import("std");
 const normalizeRune = @import("normalize.zig").normalizeRune;
+const unicode = @import("unicode.zig");
 
 /// Match result
 pub const Result = struct {
@@ -393,7 +394,8 @@ test "V1 fuzzy algorith, start and end index" {
     std.testing.log_level = .debug;
     fuzzyInit("default");
     const alloc = std.testing.allocator;
-    const text = "ABC_abc😀ask⅕⅙⅐ḥḫ🤣😊a sdkj sa9 ((( AS:ASL DKD WEP AS)))";
+    // const text = "ABC_abc😀ask⅕⅙⅐ḥḫ🤣😊a sdkj sa9 ((( AS:ASL DKD WEP AS)))";
+    const text = "a___b__c_abc";
     var input = try Chars.initFromByteSlice(alloc, text);
     defer input.deinit(alloc);
     const sidx, const eidx = fuzzyMatchV1(
@@ -401,27 +403,24 @@ test "V1 fuzzy algorith, start and end index" {
         false,
         true,
         input,
-        &[_]i32{ '😀', '🤣' },
+        // &[_]i32{ '😀', '⅕', '🤣' },
+        &[_]i32{ 'a', 'b', 'c' },
     );
+
     if (sidx == null or eidx == null) {
         log.debug("Match not found!", .{});
         return;
     }
+
     log.debug("Start index: {d}", .{sidx.?});
     log.debug("End index: {d}", .{eidx.?});
     if (input.optional_runes()) |runes| {
-        var string = std.ArrayList(u21).init(alloc);
-        defer string.deinit();
-        var ptext = std.ArrayList(u21).init(alloc);
-        defer ptext.deinit();
-        for (runes) |rune| {
-            try ptext.append(@intCast(rune));
-        }
-        for (runes[sidx.?..eidx.?]) |rune| {
-            try string.append(@intCast(rune));
-        }
-        log.debug("Initial input: {u}", .{ptext.items});
-        log.debug("Result: {u}", .{string.items});
+        const full_text = try unicode.utf8EncodeSlice(alloc, runes);
+        defer alloc.free(full_text);
+        const match = try unicode.utf8EncodeSlice(alloc, runes[sidx.?..eidx.?]);
+        defer alloc.free(match);
+        log.debug("Initial input: {s}", .{full_text});
+        log.debug("Result: {s}", .{match});
     } else {
         log.debug("Result: {s}", .{input.slice[sidx.?..eidx.?]});
     }

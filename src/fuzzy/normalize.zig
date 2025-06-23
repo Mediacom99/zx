@@ -5,7 +5,7 @@ const TABLE_SIZE = (MAX_CODEPOINT - MIN_CODEPOINT) + 1;
 
 /// FIXME: kinda sucks, for 400 u21 we are wasting
 /// around 22.5 KB and having around 7300 u21 set to zero and never used.
-const normalized_table = blk: {
+const normalization_table = blk: {
     var table: [TABLE_SIZE]u8 = [_]u8{0} ** TABLE_SIZE;
     const set = struct {
         fn set(t: *[TABLE_SIZE]u8, from: u21, to: u8) void {
@@ -480,22 +480,22 @@ const normalized_table = blk: {
 /// of the 400 most common unicode latin codepoints.
 /// Returns normalized rune if there is a normalization
 /// otherwise returns the input.
-pub inline fn normalizeRune(rune: i32) i32 {
-    if (rune < 0 or rune < MIN_CODEPOINT or rune > MAX_CODEPOINT) return rune;
-    const normalized_rune: u8 = normalized_table[@as(u21, @intCast(rune)) - MIN_CODEPOINT];
-    if (normalized_rune == 0) return rune;
-    return @intCast(normalized_rune);
+pub inline fn normalizeRune(cp: u21) u21 {
+    if (cp < 0 or cp < MIN_CODEPOINT or cp > MAX_CODEPOINT) return cp;
+    const normalized_codepoint = normalization_table[cp - MIN_CODEPOINT];
+    if (normalized_codepoint == 0) return cp;
+    return normalized_codepoint;
 }
 
 // This test's only purpose is to remind me how much memory I am wasting.
 test "Normalization table and normalizeRune" {
     var zeroes: usize = 0;
-    for (normalized_table) |b| {
+    for (normalization_table) |b| {
         if (b == 0) zeroes += 1;
     }
     try std.testing.expectEqual(7928, zeroes);
     try std.testing.expectEqual(461, TABLE_SIZE - zeroes);
-    try std.testing.expectEqual(TABLE_SIZE, normalized_table.len);
+    try std.testing.expectEqual(TABLE_SIZE, normalization_table.len);
     try std.testing.expectEqual('A', normalizeRune('A'));
     try std.testing.expectEqual('e', normalizeRune('ế'));
     try std.testing.expectEqual('y', normalizeRune(0x1E8F));

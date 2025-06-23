@@ -31,15 +31,14 @@ pub fn sanitizeUtf8UnmanagedStd(alloc: std.mem.Allocator, input: []const u8) ![]
 /// No check is perfmored on the validity of codepoints.
 /// Preallocates 4 bytes per codepoint to avoid resizing in loop.
 /// Caller owns returned memory.
-pub fn utf8EncodeSlice(alloc: std.mem.Allocator, codepoints: []const i32) ![]u8 {
+pub fn utf8EncodeSlice(alloc: std.mem.Allocator, codepoints: []const u21) ![]u8 {
     var utf8_buffer = std.ArrayList(u8).init(alloc);
     errdefer utf8_buffer.deinit();
 
     //Assume worst case scenario, every codepoint is 4 bytes
     try utf8_buffer.ensureTotalCapacityPrecise(codepoints.len * 4);
 
-    for (codepoints) |num| {
-        const cp: u21 = @intCast(num);
+    for (codepoints) |cp| {
         var temp_bytes: [4]u8 = undefined;
         const nbytes = std.unicode.utf8Encode(
             cp,

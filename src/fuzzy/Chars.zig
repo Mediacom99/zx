@@ -3,7 +3,7 @@ const std = @import("std");
 const unicode = @import("unicode.zig");
 
 /// In case of utf8-encoded unicode input this slice is the u8
-/// view of an original i32 slice containing all the input's codepoints.
+/// view of an original u21 slice containing all the input's codepoints.
 /// If input is only ascii this slice contains each character directly as u8.
 slice: []const u8,
 
@@ -51,8 +51,8 @@ fn isAsciiOptimized(bytes: []const u8) struct { bool, usize } {
 }
 
 /// Wraps byte slice into Chars: if input is only ascii the original slice is used.
-/// If input is not only ascii then every unicode codepoint is stored as i32.
-/// Chars always contains a []u8 view of the original []i32 slice in case of unicode.
+/// If input is not only ascii then every unicode codepoint is stored as u21.
+/// Chars always contains a []u8 view of the original []u21 slice in case of unicode.
 /// Input is assumed to be valid utf-8 with replacement chars if needed.
 /// Always call deinit in order to free owned runes in case of unicode input.
 pub fn initFromByteSlice(alloc: std.mem.Allocator, bytes: []const u8) !Self {
@@ -62,11 +62,11 @@ pub fn initFromByteSlice(alloc: std.mem.Allocator, bytes: []const u8) !Self {
     }
 
     //Not only ascii, first we append the ascii we have
-    var runes = std.ArrayList(i32).init(alloc);
+    var runes = std.ArrayList(u21).init(alloc);
     errdefer runes.deinit();
 
     for (0..ascii_until) |i| {
-        //Cast ascii byte as i32
+        //Cast ascii byte as u21
         try runes.append(bytes[i]);
     }
 
@@ -76,12 +76,12 @@ pub fn initFromByteSlice(alloc: std.mem.Allocator, bytes: []const u8) !Self {
         try runes.append(codepoint);
     }
 
-    const runes_owned: []i32 = try runes.toOwnedSlice();
+    const runes_owned: []u21 = try runes.toOwnedSlice();
 
     // This is smart. (All credits goes to fzf).
     // Cast owned runes slice as u8 slice
     const bytes_ptr: [*]u8 = @alignCast(@ptrCast(runes_owned.ptr));
-    const bytes_len: usize = runes_owned.len * @sizeOf(i32);
+    const bytes_len: usize = runes_owned.len * @sizeOf(u21);
     return .{
         .slice = bytes_ptr[0..bytes_len],
         .is_ascii = false,
@@ -93,7 +93,7 @@ test "initFromByteSlice ascii-only input" {
     var chars = try Self.initFromByteSlice(allocator, "Hello World!\n\t\r");
     defer chars.deinit(allocator);
     try std.testing.expectEqual(chars.is_ascii, true);
-    try std.testing.expectEqual(chars.optional_runes(), null);
+    try std.testing.expectEqual(chars.toCodepoints(), null);
     try std.testing.expectEqual(chars.length(), 15);
 }
 
@@ -127,7 +127,7 @@ test "initFromByteSlice comprehensive Unicode string" {
     var chars = try Self.initFromByteSlice(alloc, test_unicode);
     defer chars.deinit(alloc);
     try std.testing.expect(!chars.is_ascii);
-    const runes = chars.optional_runes() orelse unreachable;
+    const runes = chars.toCodepoints() orelse unreachable;
 
     // Check ASCII part
     try std.testing.expectEqual('T', runes[0]);
@@ -160,14 +160,14 @@ test "initFromByteSlice comprehensive Unicode string" {
 
     // Check Greek word "Ελληνικά"
     if (greek_start) |start| {
-        try std.testing.expectEqual(@as(i32, 0x0395), runes[start]); // Ε
-        try std.testing.expectEqual(@as(i32, 0x03BB), runes[start + 1]); // λ
-        try std.testing.expectEqual(@as(i32, 0x03BB), runes[start + 2]); // λ
-        try std.testing.expectEqual(@as(i32, 0x03B7), runes[start + 3]); // η
-        try std.testing.expectEqual(@as(i32, 0x03BD), runes[start + 4]); // ν
-        try std.testing.expectEqual(@as(i32, 0x03B9), runes[start + 5]); // ι
-        try std.testing.expectEqual(@as(i32, 0x03BA), runes[start + 6]); // κ
-        try std.testing.expectEqual(@as(i32, 0x03AC), runes[start + 7]); // ά
+        try std.testing.expectEqual(@as(u21, 0x0395), runes[start]); // Ε
+        try std.testing.expectEqual(@as(u21, 0x03BB), runes[start + 1]); // λ
+        try std.testing.expectEqual(@as(u21, 0x03BB), runes[start + 2]); // λ
+        try std.testing.expectEqual(@as(u21, 0x03B7), runes[start + 3]); // η
+        try std.testing.expectEqual(@as(u21, 0x03BD), runes[start + 4]); // ν
+        try std.testing.expectEqual(@as(u21, 0x03B9), runes[start + 5]); // ι
+        try std.testing.expectEqual(@as(u21, 0x03BA), runes[start + 6]); // κ
+        try std.testing.expectEqual(@as(u21, 0x03AC), runes[start + 7]); // ά
     }
 
     // Find Chinese "中文"
@@ -213,21 +213,21 @@ test "initFromByteSlice comprehensive Unicode string" {
 /// there is nothing to free.
 pub fn deinit(self: *Self, alloc: std.mem.Allocator) void {
     if (!self.is_ascii) {
-        if (self.optional_runes()) |runes| {
+        if (self.toCodepoints()) |runes| {
             alloc.free(@constCast(runes));
         }
     }
 }
 
-/// Casts back from u8 to original rune slice (i32).
+/// Casts back from u8 to original codepoint (u21) slice.
 /// Returns null if internal slice is ascii only.
-pub fn optional_runes(self: Self) ?[]const i32 {
+pub fn toCodepoints(self: Self) ?[]const u21 {
     if (self.is_ascii) {
         return null;
     }
-    const runes_ptr: [*]const i32 = @alignCast(@ptrCast(self.slice.ptr));
-    const runes_len = self.slice.len / @sizeOf(i32);
-    return runes_ptr[0..runes_len];
+    const codepoints_ptr: [*]const u21 = @alignCast(@ptrCast(self.slice.ptr));
+    const codepoints_len = self.slice.len / @sizeOf(u21);
+    return codepoints_ptr[0..codepoints_len];
 }
 
 test "optional_runes with unicode input" {
@@ -238,8 +238,8 @@ test "optional_runes with unicode input" {
     );
     defer chars.deinit(allocator);
     try std.testing.expectEqualDeep(
-        chars.optional_runes(),
-        &[_]i32{
+        chars.toCodepoints(),
+        &[_]u21{
             '😀', '🤣', '😊',
         },
     );
@@ -249,15 +249,15 @@ test "optional_runes with unicode input" {
 /// input or length of internal slice for
 /// ascii input.
 pub fn length(self: Self) usize {
-    if (self.optional_runes()) |runes| {
-        return runes.len;
+    if (self.toCodepoints()) |cps| {
+        return cps.len;
     }
     return self.slice.len;
 }
 
-pub fn get(self: Self, index: usize) i32 {
-    if (self.optional_runes()) |runes| {
-        return runes[index];
+pub fn get(self: Self, index: usize) u21 {
+    if (self.toCodepoints()) |cps| {
+        return cps[index];
     }
     return self.slice[index];
 }

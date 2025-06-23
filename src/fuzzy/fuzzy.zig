@@ -11,17 +11,17 @@ const unicode = @import("unicode.zig");
 
 /// Match result
 pub const Result = struct {
-    start: i32, // -1 no match
-    end: i32, // -1 no match
+    start: ?u21, // null no match
+    end: ?u21, // null for no match
     score: i32, // 0 for no match, can be negative in some cases
 
-    /// Start = end = -1; score = 0
+    /// Start = end = null; score = 0
     pub fn noMatch() Result {
-        return .{ .start = -1, .end = -1, .score = 0 };
+        return .{ .start = null, .end = null, .score = 0 };
     }
 
     pub fn isMatch(self: Result) bool {
-        return self.start >= 0;
+        return self.start != null;
     }
 };
 
@@ -167,12 +167,12 @@ pub fn fuzzyInit(scheme: []const u8) void {
 /// and checks if there is an uppercase one.
 /// Returns uppercase position first otherwise lowercase position.
 /// If case_sensitive is true uppercase and lowercase are treated as different chars.
-fn trySkip(input: Chars, case_sensitive: bool, pattern_byte: u8, from: usize) i32 {
+fn trySkip(input: Chars, case_sensitive: bool, pattern_byte: u8, from: usize) ?usize {
     var byte_array = input.slice[from..];
     if (std.mem.indexOf(u8, byte_array, &[_]u8{pattern_byte})) |index_found| {
         if (index_found == 0) {
             //Cant skip any further
-            return @intCast(from);
+            return from;
         }
         var idx = index_found;
         // We may need to search for the uppercase letter again. We dont have to
@@ -187,77 +187,77 @@ fn trySkip(input: Chars, case_sensitive: bool, pattern_byte: u8, from: usize) i3
                 idx = uidx.?;
             }
         }
-        return @intCast(from + idx);
+        return from + idx;
     }
-    return -1;
+    return null;
 }
 
 //TODO fix these tests
-// test "trySkip-case-sensitive" {
-//     fuzzyInit("default");
-//     const alloc = std.testing.allocator;
-//     const input = try Chars.initFromByteSlice(alloc, "foobar");
-//
-//     // Should find 'b' at position 3
-//     try std.testing.expectEqual(3, trySkip(input, true, 'b', 0));
-//
-//     // Starting from position 4, should find nothing
-//     try std.testing.expectEqual(-1, trySkip(input, true, 'b', 4));
-//
-//     // Should not find 'B' (case sensitive)
-//     const input2 = try Chars.initFromByteSlice(alloc, "fooBar");
-//     try std.testing.expectEqual(-1, trySkip(input2, true, 'b', 0));
-// }
+test "trySkip-case-sensitive" {
+    fuzzyInit("default");
+    const alloc = std.testing.allocator;
+    const input = try Chars.initFromByteSlice(alloc, "foobar");
 
-// test "trySkip-case-insensitive" {
-//     fuzzyInit("default");
-//     const alloc = std.testing.allocator;
-//     // Should find lowercase 'b'
-//     const input1 = try Chars.initFromByteSlice(alloc, "fooobar");
-//     try std.testing.expectEqual(4, trySkip(input1, false, 'b', 0));
-//
-//     // Should find first uppercase'B'
-//     const input2 = try Chars.initFromByteSlice(alloc, "fooBabarbarBr");
-//     try std.testing.expectEqual(3, trySkip(input2, false, 'b', 0));
-//
-//     // Should find first occurrence (uppercase comes first)
-//     const input3 = try Chars.initFromByteSlice(alloc, "aBbcd");
-//     try std.testing.expectEqual(1, trySkip(input3, false, 'b', 0));
-//
-//     // Starting from position 2, should find lowercase 'b'
-//     try std.testing.expectEqual(2, trySkip(input3, false, 'b', 2));
-// }
+    // Should find 'b' at position 3
+    try std.testing.expectEqual(3, trySkip(input, true, 'b', 0));
+
+    // Starting from position 4, should find nothing
+    try std.testing.expectEqual(null, trySkip(input, true, 'b', 4));
+
+    // Should not find 'B' (case sensitive)
+    const input2 = try Chars.initFromByteSlice(alloc, "fooBar");
+    try std.testing.expectEqual(null, trySkip(input2, true, 'b', 0));
+}
+
+test "trySkip-case-insensitive" {
+    fuzzyInit("default");
+    const alloc = std.testing.allocator;
+    // Should find lowercase 'b'
+    const input1 = try Chars.initFromByteSlice(alloc, "fooobar");
+    try std.testing.expectEqual(4, trySkip(input1, false, 'b', 0));
+
+    // Should find first uppercase'B'
+    const input2 = try Chars.initFromByteSlice(alloc, "fooBabarbarBr");
+    try std.testing.expectEqual(3, trySkip(input2, false, 'b', 0));
+
+    // Should find first occurrence (uppercase comes first)
+    const input3 = try Chars.initFromByteSlice(alloc, "aBbcd");
+    try std.testing.expectEqual(1, trySkip(input3, false, 'b', 0));
+
+    // Starting from position 2, should find lowercase 'b'
+    try std.testing.expectEqual(2, trySkip(input3, false, 'b', 2));
+}
 
 /// Computes min and max index which delimit the slice of input that might contain the match.
 /// It's an optimization in case of ascii only. The goal is to narrow down the scope
 /// onto which to apply the actual matching algorithm.
 /// Returns start index and end index + 1 of the new scope.
-fn asciiFuzzyIndex(input: Chars, pattern: []const i32, case_sensitive: bool) struct { i32, i32 } {
+fn asciiFuzzyIndex(input: Chars, pattern: []const u21, case_sensitive: bool) struct { ?usize, ?usize } {
     // Not possible because input is not ascii only
     if (!input.is_ascii) {
-        const end: i32 = @intCast(input.slice.len); //THIS LENGTH IS WRONG
-        return .{ 0, end };
+        return .{ 0, input.slice.len };
     }
 
     //Not possible because pattern is not ascii only.
     for (pattern) |b| {
         const byte: u8 = @intCast(b);
         if (!std.ascii.isAscii(byte)) {
-            return .{ -1, -1 };
+            return .{ null, null };
         }
     }
 
     //Both pattern and input are ascii only
-    var first_idx: i32 = 0;
-    var idx: i32 = 0;
-    var last_idx: i32 = 0;
+    var first_idx: usize = 0;
+    var idx: usize = 0;
+    var last_idx: usize = 0;
     var byte: u8 = undefined;
     for (0..pattern.len) |pidx| {
         //We know pidx to be ascii so u8 is fine
         byte = @intCast(pattern[pidx]);
-        idx = trySkip(input, case_sensitive, byte, @as(usize, @intCast(idx)));
-        if (idx < 0) {
-            return .{ -1, -1 };
+        if (trySkip(input, case_sensitive, byte, idx)) |i| {
+            idx = i;
+        } else {
+            return .{ null, null };
         }
         // if we found the first pattern byte in the input
         // we step back to find the right bonus point
@@ -273,13 +273,11 @@ fn asciiFuzzyIndex(input: Chars, pattern: []const i32, case_sensitive: bool) str
     if (!case_sensitive and std.ascii.isLower(byte)) {
         bu = byte - 32;
     }
-    const last_idx_usize: usize = @intCast(last_idx);
-    const scope = input.slice[last_idx_usize..];
+    const scope = input.slice[last_idx..];
     var offset: usize = scope.len - 1;
     while (offset > 0) : (offset -= 1) {
         if (scope[offset] == byte or scope[offset] == bu) {
-            const offset_i32: i32 = @intCast(offset);
-            return .{ first_idx, last_idx + offset_i32 + 1 };
+            return .{ first_idx, last_idx + offset + 1 };
         }
     }
     return .{ first_idx, last_idx + 1 };
@@ -292,14 +290,15 @@ fn indexAt(index: usize, max: usize, forward: bool) usize {
     return max - index - 1;
 }
 
+//TODO check use of subtraction with usize indexing
 fn fuzzyMatchV1(
     case_sensitive: bool,
     normalize: bool,
     forward: bool, //If true start from matching from beginning, otherwise from end
     text: Chars,
-    pattern: []const i32,
+    pattern: []const u21,
     //with_pos_alloc: ?std.mem.Allocator,
-    // ) struct { Result, ?[]i32 } {
+    // ) struct { Result, ?[]u21 } {
 ) struct { ?usize, ?usize } {
     if (pattern.len == 0) {
         // return .{ Result{ .start = 0, .end = 0, .score = 0 }, null };
@@ -308,21 +307,21 @@ fn fuzzyMatchV1(
 
     // Narrow search scope
     const start_idx, _ = asciiFuzzyIndex(text, pattern, case_sensitive);
-    if (start_idx < 0) {
+    if (start_idx == null) {
         // return .{ Result.noMatch(), null };
         return .{ null, null };
     }
 
-    var pidx: i32 = 0; //pattern index
-    var sidx: i32 = -1; //start index of match in text
-    var eidx: i32 = -1; //end index of match in text
+    var pidx: usize = 0; //pattern index
+    var sidx: ?usize = null; //start index of match in text
+    var eidx: ?usize = null; //end index of match in text
 
     const len_runes = text.length();
     const len_pattern = pattern.len;
 
     //Loop over number of runes
     for (0..len_runes) |index| {
-        var char: i32 = text.get(indexAt(index, len_runes, forward));
+        var char: u21 = text.get(indexAt(index, len_runes, forward));
         if (!case_sensitive) {
             //TODO
             @panic("TODO!");
@@ -332,25 +331,25 @@ fn fuzzyMatchV1(
             char = normalizeRune(char);
         }
 
-        const pchar = pattern[indexAt(@intCast(pidx), len_pattern, forward)];
+        const pchar: u21 = pattern[indexAt(pidx, len_pattern, forward)];
         if (char == pchar) {
-            if (sidx < 0) {
-                sidx = @intCast(index);
+            if (sidx == null) {
+                sidx = index;
             }
             pidx += 1;
             if (pidx == len_pattern) {
-                eidx = @intCast(index + 1);
+                eidx = index + 1;
                 break;
             }
         }
     }
 
     // we proceed with backward scan
-    if (sidx >= 0 and eidx >= 0) {
+    if (sidx != null and eidx != null) {
         pidx -= 1;
-        var index: i32 = eidx - 1;
-        while (index >= sidx) : (index -= 1) {
-            const tidx = indexAt(@intCast(index), len_runes, forward);
+        var index = eidx.? - 1;
+        while (index >= sidx.?) : (index -= 1) {
+            const tidx = indexAt(index, len_runes, forward);
             var char = text.get(tidx);
             if (!case_sensitive) {
                 //TODO
@@ -358,20 +357,21 @@ fn fuzzyMatchV1(
             }
             if (normalize) char = normalizeRune(char);
 
-            const pidx_ = indexAt(@intCast(pidx), len_pattern, forward);
+            const pidx_ = indexAt(pidx, len_pattern, forward);
             const pchar = pattern[pidx_];
             if (char == pchar) {
-                pidx -= 1;
-                if (pidx < 0) {
+                if (pidx == 0) {
                     sidx = index;
                     break;
+                } else {
+                    pidx -= 1;
                 }
             }
         }
 
         if (!forward) {
-            sidx = @as(i32, @intCast(len_runes)) - eidx;
-            eidx = @as(i32, @intCast(len_runes)) - sidx;
+            sidx = len_runes - eidx.?;
+            eidx = len_runes - sidx.?;
         }
 
         // const score, const pos = calculateScore(
@@ -383,7 +383,7 @@ fn fuzzyMatchV1(
         //     sidx,
         //     eidx,
         // );
-        return .{ @intCast(sidx), @intCast(eidx) };
+        return .{ sidx, eidx };
     }
 
     // return .{ Result.noMatch(), null };
@@ -394,8 +394,8 @@ test "V1 fuzzy algorith, start and end index" {
     std.testing.log_level = .debug;
     fuzzyInit("default");
     const alloc = std.testing.allocator;
-    // const text = "ABC_abc😀ask⅕⅙⅐ḥḫ🤣😊a sdkj sa9 ((( AS:ASL DKD WEP AS)))";
-    const text = "a___b__c_abc";
+    const text = "ABC_abc😀ask⅕⅙⅐ḥḫ🤣😊a sdkj sa9 ((( AS:ASL DKD WEP AS)))";
+    // const text = "f___n_k_93493a___b__c_abc";
     var input = try Chars.initFromByteSlice(alloc, text);
     defer input.deinit(alloc);
     const sidx, const eidx = fuzzyMatchV1(
@@ -403,8 +403,8 @@ test "V1 fuzzy algorith, start and end index" {
         false,
         true,
         input,
-        // &[_]i32{ '😀', '⅕', '🤣' },
-        &[_]i32{ 'a', 'b', 'c' },
+        &[_]u21{ '😀', '⅕', '🤣' },
+        // &[_]u21{ 'f', '_', '9' },
     );
 
     if (sidx == null or eidx == null) {
@@ -414,10 +414,10 @@ test "V1 fuzzy algorith, start and end index" {
 
     log.debug("Start index: {d}", .{sidx.?});
     log.debug("End index: {d}", .{eidx.?});
-    if (input.optional_runes()) |runes| {
-        const full_text = try unicode.utf8EncodeSlice(alloc, runes);
+    if (input.toCodepoints()) |cp| {
+        const full_text = try unicode.utf8EncodeSlice(alloc, cp);
         defer alloc.free(full_text);
-        const match = try unicode.utf8EncodeSlice(alloc, runes[sidx.?..eidx.?]);
+        const match = try unicode.utf8EncodeSlice(alloc, cp[sidx.?..eidx.?]);
         defer alloc.free(match);
         log.debug("Initial input: {s}", .{full_text});
         log.debug("Result: {s}", .{match});

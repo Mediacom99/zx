@@ -192,39 +192,32 @@ fn trySkip(input: Chars, case_sensitive: bool, pattern_byte: u8, from: usize) ?u
     return null;
 }
 
-//TODO fix these tests
 test "trySkip-case-sensitive" {
     fuzzyInit("default");
     const alloc = std.testing.allocator;
     const input = try Chars.initFromByteSlice(alloc, "foobar");
 
-    // Should find 'b' at position 3
     try std.testing.expectEqual(3, trySkip(input, true, 'b', 0));
-
-    // Starting from position 4, should find nothing
     try std.testing.expectEqual(null, trySkip(input, true, 'b', 4));
 
-    // Should not find 'B' (case sensitive)
     const input2 = try Chars.initFromByteSlice(alloc, "fooBar");
+
     try std.testing.expectEqual(null, trySkip(input2, true, 'b', 0));
 }
 
 test "trySkip-case-insensitive" {
     fuzzyInit("default");
     const alloc = std.testing.allocator;
-    // Should find lowercase 'b'
+
     const input1 = try Chars.initFromByteSlice(alloc, "fooobar");
     try std.testing.expectEqual(4, trySkip(input1, false, 'b', 0));
 
-    // Should find first uppercase'B'
     const input2 = try Chars.initFromByteSlice(alloc, "fooBabarbarBr");
     try std.testing.expectEqual(3, trySkip(input2, false, 'b', 0));
 
-    // Should find first occurrence (uppercase comes first)
     const input3 = try Chars.initFromByteSlice(alloc, "aBbcd");
     try std.testing.expectEqual(1, trySkip(input3, false, 'b', 0));
 
-    // Starting from position 2, should find lowercase 'b'
     try std.testing.expectEqual(2, trySkip(input3, false, 'b', 2));
 }
 

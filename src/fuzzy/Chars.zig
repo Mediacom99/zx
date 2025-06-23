@@ -219,7 +219,7 @@ pub fn deinit(self: *Self, alloc: std.mem.Allocator) void {
     }
 }
 
-/// Casts back from u8 to original codepoint (u21) slice.
+/// Casts back from u8 view to original codepoint (u21) slice.
 /// Returns null if internal slice is ascii only.
 pub fn toCodepoints(self: Self) ?[]const u21 {
     if (self.is_ascii) {

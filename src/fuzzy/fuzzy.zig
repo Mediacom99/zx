@@ -395,7 +395,7 @@ test "V1 fuzzy algorith, start and end index" {
     fuzzyInit("default");
     const alloc = std.testing.allocator;
     const text = "ABC_abc😀ask⅕⅙⅐ḥḫ🤣😊a sdkj sa9 ((( AS:ASL DKD WEP AS)))";
-    // const text = "f___n_k_93493a___b__c_abc";
+    const pattern = [_]u21{ '😀', '⅕', '🤣' };
     var input = try Chars.initFromByteSlice(alloc, text);
     defer input.deinit(alloc);
     const sidx, const eidx = fuzzyMatchV1(
@@ -403,25 +403,17 @@ test "V1 fuzzy algorith, start and end index" {
         false,
         true,
         input,
-        &[_]u21{ '😀', '⅕', '🤣' },
-        // &[_]u21{ 'f', '_', '9' },
+        &pattern,
     );
 
-    if (sidx == null or eidx == null) {
-        log.debug("Match not found!", .{});
-        return;
-    }
+    try expectEqual(sidx != null, true);
+    try expectEqual(eidx != null, true);
 
-    log.debug("Start index: {d}", .{sidx.?});
-    log.debug("End index: {d}", .{eidx.?});
-    if (input.toCodepoints()) |cp| {
-        const full_text = try unicode.utf8EncodeSlice(alloc, cp);
-        defer alloc.free(full_text);
-        const match = try unicode.utf8EncodeSlice(alloc, cp[sidx.?..eidx.?]);
-        defer alloc.free(match);
-        log.debug("Initial input: {s}", .{full_text});
-        log.debug("Result: {s}", .{match});
-    } else {
-        log.debug("Result: {s}", .{input.slice[sidx.?..eidx.?]});
-    }
+    const cp = input.toCodepoints().?;
+    const match = try unicode.utf8EncodeSlice(alloc, cp[sidx.?..eidx.?]);
+    defer alloc.free(match);
+
+    try std.testing.expectEqualDeep("😀ask⅕⅙⅐ḥḫ🤣", match);
+    try expectEqual(sidx.?, 7);
+    try expectEqual(eidx.?, 17);
 }

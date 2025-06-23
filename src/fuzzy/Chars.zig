@@ -80,7 +80,7 @@ pub fn initFromByteSlice(alloc: std.mem.Allocator, bytes: []const u8) !Self {
 
     // This is smart. (All credits goes to fzf).
     // Cast owned runes slice as u8 slice
-    const bytes_ptr: [*]u8 = @alignCast(@ptrCast(runes_owned.ptr));
+    const bytes_ptr: [*]const u8 = @alignCast(@ptrCast(runes_owned.ptr));
     const bytes_len: usize = runes_owned.len * @sizeOf(u21);
     return .{
         .slice = bytes_ptr[0..bytes_len],
@@ -212,10 +212,8 @@ test "initFromByteSlice comprehensive Unicode string" {
 /// original byte was enough to store the input, so
 /// there is nothing to free.
 pub fn deinit(self: *Self, alloc: std.mem.Allocator) void {
-    if (!self.is_ascii) {
-        if (self.toCodepoints()) |runes| {
-            alloc.free(@constCast(runes));
-        }
+    if (!self.is_ascii and self.toCodepoints() != null) {
+        alloc.free(@constCast(self.toCodepoints().?));
     }
 }
 

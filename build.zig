@@ -1,7 +1,7 @@
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {
-    const run_step = b.step("run", "Run zhist");
+    const run_step = b.step("run", "Run zx");
     const docs_step = b.step("docs", 
     "Install generated docs into zig-out/prefix");
     const history_tests_step = b.step("history-tests", "Run History.zig tests");
@@ -24,7 +24,7 @@ pub fn build(b: *std.Build) void {
 
     const exe = b.addExecutable(.{
         .root_module = exe_module,
-        .name = "zhist",
+        .name = "zx",
     });
 
     b.installArtifact(exe);

@@ -4,10 +4,9 @@
 const Chars = @import("Chars.zig");
 const expectEqual = std.testing.expectEqual;
 const log = std.log;
-const Slab = @import("slab").Slab;
 const std = @import("std");
-const normalizeRune = @import("normalize.zig").normalizeRune;
-const unicode = @import("unicode.zig");
+const normalizeRune = @import("../unicode/normalize.zig").normalizeRune;
+const unicode = @import("../unicode/unicode.zig");
 
 /// Match result
 pub const Result = struct {
@@ -287,7 +286,7 @@ fn indexAt(index: usize, max: usize, forward: bool) usize {
 fn fuzzyMatchV1(
     case_sensitive: bool,
     normalize: bool,
-    forward: bool, //If true start from matching from beginning, otherwise from end
+    forward: bool, //If true start matching from beginning, otherwise from end
     text: Chars,
     pattern: []const u21,
     //with_pos_alloc: ?std.mem.Allocator,
@@ -317,6 +316,11 @@ fn fuzzyMatchV1(
         var char: u21 = text.get(indexAt(index, len_runes, forward));
         if (!case_sensitive) {
             //TODO
+            if (char >= 'A' and char <= 'Z') {
+                char += 32; // lowercase char
+            } else if (char > MAX_ASCII) {
+                char = unicode.toLower(char);
+            }
             @panic("TODO!");
         }
 

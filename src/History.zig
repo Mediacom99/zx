@@ -1,4 +1,4 @@
-const unicode = @import("./fuzzy/unicode.zig");
+const unicode = @import("./unicode/unicode.zig");
 const Map = std.StringHashMap(*List.Node);
 const List = std.DoublyLinkedList(Command);
 const Self = @This();

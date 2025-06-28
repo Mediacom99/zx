@@ -1,6 +1,6 @@
 const Self = @This();
 const std = @import("std");
-const unicode = @import("unicode.zig");
+const unicode = @import("../unicode/unicode.zig");
 
 /// In case of utf8-encoded unicode input this slice is the u8
 /// view of an original u21 slice containing all the input's codepoints.

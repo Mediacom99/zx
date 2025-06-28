@@ -3,6 +3,7 @@
 - fix fuzzy commented-out fuzzy tests
 - finish FuzzyMatchV1 algorithm.
 - implement FuzzyMatchV2 version.
+- improve testing (actually test all possible cases, not just some random ones)
 
 # TODO WIP V1
 

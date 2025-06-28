@@ -2,13 +2,15 @@ const std = @import("std");
 
 pub fn build(b: *std.Build) void {
     const run_step = b.step("run", "Run zx");
-    const docs_step = b.step("docs", 
-    "Install generated docs into zig-out/prefix");
+    const docs_step = b.step("docs", "Install generated docs into zig-out/prefix");
     const history_tests_step = b.step("history-tests", "Run History.zig tests");
-    const fuzzy_tests_step = b.step("fuzzy-tests", "Run fuzzy tests", );
+    const fuzzy_tests_step = b.step(
+        "fuzzy-tests",
+        "Run fuzzy tests",
+    );
     const example_run_unicode_step = b.step("run-example-unicode", "Run unicode example");
 
-    const deps_args = .{ 
+    const deps_args = .{
         .optimize = b.standardOptimizeOption(.{}),
         .target = b.standardTargetOptions(.{}),
     };
@@ -34,9 +36,8 @@ pub fn build(b: *std.Build) void {
     }
     run_step.dependOn(&run_exe.step);
 
-
     // -------- DOCS --------
-  
+
     const install_docs = b.addInstallDirectory(.{
         .source_dir = exe.getEmittedDocs(),
         .install_dir = .prefix,
@@ -66,13 +67,13 @@ pub fn build(b: *std.Build) void {
     const run_fuzzy_tests = b.addRunArtifact(fuzzy_tests);
     fuzzy_tests_step.dependOn(&run_fuzzy_tests.step);
 
-    // -------- EXAMPLES -------- 
+    // -------- EXAMPLES --------
 
     const fuzzy_module_exports = b.addModule("fuzzy", .{
-        .root_source_file = b.path("./src/fuzzy/fuzzy-exports.zig"),
         .target = deps_args.target,
         .optimize = deps_args.optimize,
     });
+
     const unicode_example = b.addExecutable(.{
         .name = "unicode-example",
         .root_source_file = b.path("./examples/unicode.zig"),

@@ -16,6 +16,19 @@ pub fn build(b: *std.Build) void {
     };
 
     const vaxis = b.dependency("vaxis", deps_args);
+
+    const fuzzy_module = b.createModule(.{
+        .root_source_file = b.path("src/fuzzy/main.zig"),
+        .optimize = deps_args.optimize,
+        .target = deps_args.target,
+    });
+
+    const unicode_module = b.createModule(.{
+        .root_source_file = b.path("src/unicode/main.zig"),
+        .optimize = deps_args.optimize,
+        .target = deps_args.target,
+    });
+
     const exe_module = b.createModule(.{
         .root_source_file = b.path("src/main.zig"),
         .optimize = deps_args.optimize,
@@ -23,6 +36,8 @@ pub fn build(b: *std.Build) void {
     });
 
     exe_module.addImport("vaxis", vaxis.module("vaxis"));
+    exe_module.addImport("fuzzy", fuzzy_module);
+    exe_module.addImport("unicode", unicode_module);
 
     const exe = b.addExecutable(.{
         .root_module = exe_module,
@@ -30,6 +45,7 @@ pub fn build(b: *std.Build) void {
     });
 
     b.installArtifact(exe);
+
     const run_exe = b.addRunArtifact(exe);
     if (b.args) |args| {
         run_exe.addArgs(args);
@@ -54,25 +70,22 @@ pub fn build(b: *std.Build) void {
             .optimize = deps_args.optimize,
         }),
     });
+    history_tests.root_module.addImport("unicode", unicode_module);
     const run_history_tests = b.addRunArtifact(history_tests);
     history_tests_step.dependOn(&run_history_tests.step);
 
     const fuzzy_tests = b.addTest(.{
         .root_module = b.createModule(.{
-            .root_source_file = b.path("./src/fuzzy/fuzzy.zig"),
+            .root_source_file = b.path("src/fuzzy/fuzzy.zig"),
             .target = deps_args.target,
             .optimize = deps_args.optimize,
         }),
     });
+    fuzzy_tests.root_module.addImport("unicode", unicode_module);
     const run_fuzzy_tests = b.addRunArtifact(fuzzy_tests);
     fuzzy_tests_step.dependOn(&run_fuzzy_tests.step);
 
     // -------- EXAMPLES --------
-
-    const fuzzy_module_exports = b.addModule("fuzzy", .{
-        .target = deps_args.target,
-        .optimize = deps_args.optimize,
-    });
 
     const unicode_example = b.addExecutable(.{
         .name = "unicode-example",
@@ -80,7 +93,8 @@ pub fn build(b: *std.Build) void {
         .target = deps_args.target,
         .optimize = deps_args.optimize,
     });
-    unicode_example.root_module.addImport("fuzzy", fuzzy_module_exports);
+    unicode_example.root_module.addImport("fuzzy", fuzzy_module);
+    unicode_example.root_module.addImport("unicode", unicode_module);
     const unicode_example_run = b.addRunArtifact(unicode_example);
     example_run_unicode_step.dependOn(&unicode_example_run.step);
 }

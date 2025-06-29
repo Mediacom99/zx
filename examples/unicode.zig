@@ -1,7 +1,7 @@
 const std = @import("std");
 const fuzzy = @import("fuzzy");
 const Chars = fuzzy.Chars;
-const unicode = fuzzy.unicode;
+const unicode = @import("unicode");
 
 pub fn main() !void {
     var dba = std.heap.DebugAllocator(.{}).init;
@@ -109,20 +109,20 @@ pub fn main() !void {
     std.debug.print("is_ascii: {}\n", .{chars.is_ascii});
     std.debug.print("length in runes: {}\n", .{chars.length()});
 
-    // Get runes and examine each
-    const runes = chars.optional_runes().?;
-    std.debug.print("\nCodepoint analysis ({} codepoints):\n", .{runes.len});
+    // Examine each codepoint
+    const codepoints = chars.toCodepoints() orelse unreachable;
+    std.debug.print("\nCodepoint analysis ({} codepoints):\n", .{codepoints.len});
 
-    var rune_string = std.ArrayList(u8).init(alloc);
-    defer rune_string.deinit();
-    for (runes, 0..) |rune, i| {
-        rune_string.clearRetainingCapacity();
-        std.debug.print("  [{:2}] U+{X:0>4} (dec: {:6}) ", .{ i, rune, rune });
-        try std.fmt.formatUnicodeCodepoint(@intCast(rune), .{}, rune_string.writer());
-        std.debug.print("Rune: {s}", .{rune_string.items});
+    var unicode_string = std.ArrayList(u8).init(alloc);
+    defer unicode_string.deinit();
+    for (codepoints, 0..) |cp, i| {
+        unicode_string.clearRetainingCapacity();
+        std.debug.print("  [{:2}] U+{X:0>4} (dec: {:6}) ", .{ i, cp, cp });
+        try std.fmt.formatUnicodeCodepoint(@intCast(cp), .{}, unicode_string.writer());
+        std.debug.print("Rune: {s}", .{unicode_string.items});
 
         // Describe the character
-        const desc: []const u8 = switch (rune) {
+        const desc: []const u8 = switch (cp) {
             0x0000...0x007F => " - " ++ "ascii",
             0xFFFD => " - " ++ "replacement",
             else => "",

@@ -1,12 +1,14 @@
-const unicode = @import("./unicode/unicode.zig");
+const std = @import("std");
+const builtin = @import("builtin");
+const assert = std.debug.assert;
+const log = std.log;
+
+const unicode = @import("unicode");
+
+const Allocator = std.mem.Allocator;
 const Map = std.StringHashMap(*List.Node);
 const List = std.DoublyLinkedList(Command);
 const Self = @This();
-const std = @import("std");
-const assert = std.debug.assert;
-const builtin = @import("builtin");
-const log = std.log;
-const Allocator = std.mem.Allocator;
 
 pub const Error = error{
     EmptyFile,

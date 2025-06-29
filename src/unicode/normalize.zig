@@ -1,4 +1,5 @@
 const std = @import("std");
+
 const MIN_CODEPOINT: u21 = 0x00C0;
 const MAX_CODEPOINT: u21 = 0x2184;
 const TABLE_SIZE = (MAX_CODEPOINT - MIN_CODEPOINT) + 1;
@@ -476,11 +477,11 @@ const normalization_table = blk: {
     break :blk table;
 };
 
-/// Normalizes rune based on custom fzf lookup table
+/// Normalizes codepoint based on custom lookup table
 /// of the 400 most common unicode latin codepoints.
-/// Returns normalized rune if there is a normalization
-/// otherwise returns the input.
-pub inline fn normalizeRune(cp: u21) u21 {
+/// Returns normalized codepoint if there is a normalization
+/// otherwise returns the original codepoint.
+pub inline fn normalizeCodepoint(cp: u21) u21 {
     if (cp < 0 or cp < MIN_CODEPOINT or cp > MAX_CODEPOINT) return cp;
     const normalized_codepoint = normalization_table[cp - MIN_CODEPOINT];
     if (normalized_codepoint == 0) return cp;
@@ -488,7 +489,7 @@ pub inline fn normalizeRune(cp: u21) u21 {
 }
 
 // This test's only purpose is to remind me how much memory I am wasting.
-test "Normalization table and normalizeRune" {
+test "Normalization table and normalizeCodepoint" {
     var zeroes: usize = 0;
     for (normalization_table) |b| {
         if (b == 0) zeroes += 1;
@@ -496,9 +497,9 @@ test "Normalization table and normalizeRune" {
     try std.testing.expectEqual(7928, zeroes);
     try std.testing.expectEqual(461, TABLE_SIZE - zeroes);
     try std.testing.expectEqual(TABLE_SIZE, normalization_table.len);
-    try std.testing.expectEqual('A', normalizeRune('A'));
-    try std.testing.expectEqual('e', normalizeRune('ế'));
-    try std.testing.expectEqual('y', normalizeRune(0x1E8F));
-    try std.testing.expectEqual('n', normalizeRune(0x1E47));
-    try std.testing.expectEqual('h', normalizeRune(0x1E29));
+    try std.testing.expectEqual('A', normalizeCodepoint('A'));
+    try std.testing.expectEqual('e', normalizeCodepoint('ế'));
+    try std.testing.expectEqual('y', normalizeCodepoint(0x1E8F));
+    try std.testing.expectEqual('n', normalizeCodepoint(0x1E47));
+    try std.testing.expectEqual('h', normalizeCodepoint(0x1E29));
 }

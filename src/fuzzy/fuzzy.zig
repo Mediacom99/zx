@@ -1,12 +1,12 @@
 //! Zig implementation of fzf V1 and V2 fuzzy matching algorithms.
 //! https://github.com/junegunn/fzf
 
-const Chars = @import("Chars.zig");
+const std = @import("std");
 const expectEqual = std.testing.expectEqual;
 const log = std.log;
-const std = @import("std");
-const normalizeRune = @import("../unicode/normalize.zig").normalizeRune;
-const unicode = @import("../unicode/unicode.zig");
+
+const unicode = @import("unicode");
+const Chars = @import("Chars.zig");
 
 /// Match result
 pub const Result = struct {
@@ -315,17 +315,16 @@ fn fuzzyMatchV1(
     for (0..len_runes) |index| {
         var char: u21 = text.get(indexAt(index, len_runes, forward));
         if (!case_sensitive) {
-            //TODO
-            if (char >= 'A' and char <= 'Z') {
-                char += 32; // lowercase char
-            } else if (char > MAX_ASCII) {
-                char = unicode.toLower(char);
-            }
+            // //TODO
+            // if (char >= 'A' and char <= 'Z') {
+            //     char += 32; // lowercase char
+            // } else if (char > MAX_ASCII) {
+            // }
             @panic("TODO!");
         }
 
         if (normalize) {
-            char = normalizeRune(char);
+            char = unicode.normalizeCodepoint(char);
         }
 
         const pchar: u21 = pattern[indexAt(pidx, len_pattern, forward)];
@@ -352,7 +351,7 @@ fn fuzzyMatchV1(
                 //TODO
                 @panic("TODO");
             }
-            if (normalize) char = normalizeRune(char);
+            if (normalize) char = unicode.normalize.normalizeCodepoint(char);
 
             const pidx_ = indexAt(pidx, len_pattern, forward);
             const pchar = pattern[pidx_];

@@ -4,7 +4,7 @@ zx-hook() {
   local out="$($zx)"
   # Only insert if output is not empty (ignoring whitespace)
   if [[ -n "${out//[[:space:]]/}" ]]; then
-    BUFFER="$BUFFER$out"
+    BUFFER="$out"
     # Place cursor at end of buffer
     CURSOR=${#BUFFER}
   fi

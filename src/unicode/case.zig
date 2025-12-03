@@ -5,6 +5,25 @@ pub const CaseType = enum {
     MaxCase,
 };
 
+pub fn To(case: CaseType, cp: u21) u21 {
+    if (lookupCaseRange(cp)) |range| {
+        return convertCase(case, range, cp);
+    }
+    return cp;
+}
+
+/// Returns the Range mapping for codepoint cp or null if no mapping
+/// exists for cp.
+fn lookupCaseRange(cp: u21) ?Range {
+    // binary search over ranges
+    var lo: u21 = 0;
+    var hi: u21 = RANGES.len;
+    while (lo < hi) {}
+    return null;
+}
+
+fn convertCase(case: CaseType, range: Range, cp: u21) u21 {}
+
 // We would need i22 (1 bit for sign + full 21 bits codepoint)
 // but in practice we dont even need 21 bits. I kept u21 for
 // consistencty with unicode codepoints.
@@ -15,6 +34,7 @@ const Delta = struct {
 };
 
 const Range = struct { lo: u21, hi: u21, delta: Delta };
+
 // Value of 1 in delta is used for alternating upper/lower pattern
 const RANGES = [_]Range{
     .{ 0x0041, 0x005A, .{ 0, 32, 0 } },
@@ -346,22 +366,3 @@ const RANGES = [_]Range{
     .{ 0x1E900, 0x1E921, .{ 0, 34, 0 } },
     .{ 0x1E922, 0x1E943, .{ -34, 0, -34 } },
 };
-
-// pub fn To(case: CaseType, cp: u21) u21 {
-//     if (lookupCaseRange(cp)) |range| {
-//         return convertCase(case, range, cp);
-//     }
-//     return cp;
-// }
-
-// /// Returns the Range mapping for codepoint cp or null if no mapping
-// /// exists for cp.
-// fn lookupCaseRange(cp: u21) ?Range {
-//     // binary searc over ranges
-//     var lo: u21 = 0;
-//     var hi: u21 = RANGES.len;
-//     while (lo < hi) {}
-//     return null;
-// }
-
-// fn convertCase(case: CaseType, range: Range, cp: u21) u21 {}

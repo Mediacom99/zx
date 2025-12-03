@@ -12,8 +12,49 @@ list_view: vxfw.ListView,
 text: vxfw.Text,
 history: History,
 list_items: std.ArrayList(vxfw.RichText),
-arena: Allocator,
+arena: std.heap.ArenaAllocator,
+gpa: std.mem.Allocator,
 result: ?[]const u8,
+
+// Do we really need to store ui in the heap ?
+pub fn init(allocator: std.mem.Allocator, app: *const vxfw.App, history: History) !*Self {
+    const ui = try allocator.create(Self);
+    errdefer allocator.destroy(ui);
+    ui.gpa = allocator;
+    ui.arena = std.heap.ArenaAllocator.init(allocator);
+    ui.history = history;
+    ui.list_items = std.ArrayList(vxfw.RichText).init(allocator);
+    ui.result = null;
+    ui.text = .{
+        .text = "Welcome to Zhist!",
+        .width_basis = .parent,
+        .text_align = .center,
+        .style = .{ .fg = .{ .rgb = [_]u8{ 255, 221, 51 } } },
+    };
+    ui.text_field = .{
+        .buf = vxfw.TextField.Buffer.init(allocator),
+        .unicode = &app.vx.unicode,
+        .userdata = ui,
+        .onChange = Self.textFieldOnChange,
+        .onSubmit = Self.textFieldOnSubmit,
+    };
+    ui.list_view = .{
+        .children = .{
+            .builder = .{
+                .userdata = ui,
+                .buildFn = Self.listViewWidgetBuilder,
+            },
+        },
+    };
+    return ui;
+}
+
+pub fn deinit(self: *Self) void {
+    self.text_field.deinit();
+    self.list_items.deinit();
+    self.arena.deinit();
+    self.gpa.destroy(self);
+}
 
 pub fn widget(self: *Self) vxfw.Widget {
     return .{
@@ -34,8 +75,9 @@ fn typeErasedEventHandler(ptr: *anyopaque, ctx: *vxfw.EventContext, event: vxfw.
             var temp = self.history.list.last;
             log.debug("Commands: {d}", .{self.history.list.len});
             while (temp) |node| {
-                var spans = std.ArrayList(vxfw.RichText.TextSpan).init(self.arena);
-                const text = try std.fmt.allocPrint(self.arena, "[{d}] {s}", .{ node.data.reruns, node.data.cmd });
+                const allocator = self.arena.allocator();
+                var spans = std.ArrayList(vxfw.RichText.TextSpan).init(allocator);
+                const text = try std.fmt.allocPrint(allocator, "[{d}] {s}", .{ node.data.reruns, node.data.cmd });
                 const text_span: vxfw.RichText.TextSpan = .{ .text = text, .style = .{ .bold = false } };
                 try spans.append(text_span);
                 const rich_text: vxfw.RichText = .{ .text = spans.items, .text_align = .left };

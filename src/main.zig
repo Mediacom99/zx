@@ -32,57 +32,24 @@ pub fn main() !void {
                 return e;
             };
         defer allocator.free(home);
-        hist_filepath = try std.fmt.allocPrint(allocator, "{s}/.histfile", .{home});
         from_env = true;
+        hist_filepath = try std.fmt.allocPrint(allocator, "{s}/.histfile", .{home});
         log.debug("Histfile path found: {s}", .{hist_filepath});
     }
     defer {
         if (from_env) allocator.free(hist_filepath);
     }
 
-    var arena_allocator = std.heap.ArenaAllocator.init(allocator);
-    defer arena_allocator.deinit();
-    const arena = arena_allocator.allocator();
-
-    var history = History.init(allocator, arena);
+    var history = History.init(allocator);
     defer history.deinit();
-    try history.parseFile(hist_filepath);
 
-    const ui = try allocator.create(Ui);
-    defer allocator.destroy(ui);
+    try history.parseFile(hist_filepath);
 
     var app = try vxfw.App.init(allocator);
     errdefer app.deinit();
 
-    const Color = vaxis.Cell.Color;
-    const gruber_yellow: Color = .{ .rgb = [_]u8{ 255, 221, 51 } };
-    ui.history = history;
-    ui.arena = arena;
-    ui.list_items = std.ArrayList(vxfw.RichText).init(allocator);
-    ui.result = null;
-    ui.text = .{
-        .text = "Welcome to Zhist!",
-        .width_basis = .parent,
-        .text_align = .center,
-        .style = .{ .fg = gruber_yellow },
-    };
-    ui.text_field = .{
-        .buf = vxfw.TextField.Buffer.init(allocator),
-        .unicode = &app.vx.unicode,
-        .userdata = ui,
-        .onChange = Ui.textFieldOnChange,
-        .onSubmit = Ui.textFieldOnSubmit,
-    };
-    ui.list_view = .{
-        .children = .{
-            .builder = .{
-                .userdata = ui,
-                .buildFn = Ui.listViewWidgetBuilder,
-            },
-        },
-    };
-    defer ui.text_field.deinit();
-    defer ui.list_items.deinit();
+    const ui = try Ui.init(allocator, &app, history);
+    defer ui.deinit();
 
     try app.run(ui.widget(), .{ .framerate = 60 });
     app.deinit();
@@ -96,7 +63,7 @@ pub fn main() !void {
             }
         }
         // Extracted command string
-        const prompt = res[(skip_reruns + 2)..];
-        try std.io.getStdOut().writer().print("{s}\n", .{prompt});
+        const output = res[(skip_reruns + 2)..];
+        try std.io.getStdOut().writer().print("{s}", .{output});
     }
 }

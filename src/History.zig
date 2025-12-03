@@ -2,9 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const assert = std.debug.assert;
 const log = std.log;
-
 const unicode = @import("unicode");
-
 const Allocator = std.mem.Allocator;
 const Map = std.StringHashMap(*List.Node);
 const List = std.DoublyLinkedList(Command);
@@ -31,12 +29,12 @@ map: Map = undefined,
 
 gpa: Allocator,
 
-arena: Allocator,
+arena: std.heap.ArenaAllocator,
 
-pub fn init(allocator: Allocator, arena: Allocator) Self {
+pub fn init(allocator: Allocator) Self {
     return .{
         .gpa = allocator,
-        .arena = arena,
+        .arena = std.heap.ArenaAllocator.init(allocator),
         .list = List{},
         .map = Map.init(allocator),
     };
@@ -44,7 +42,7 @@ pub fn init(allocator: Allocator, arena: Allocator) Self {
 
 pub fn deinit(self: *Self) void {
     self.map.deinit();
-    return;
+    self.arena.deinit();
 }
 
 pub fn parseFile(self: *Self, path: []const u8) !void {
@@ -95,6 +93,7 @@ pub fn parseFile(self: *Self, path: []const u8) !void {
     }
 
     var iter = std.mem.splitScalar(u8, valid_content, '\n');
+    const arena_alloc = self.arena.allocator();
     while (iter.next()) |cmd| {
         if (cmd.len == 0) continue;
         //the key is the first KEY_SIZE bytes of cmd that are not spaces
@@ -109,14 +108,14 @@ pub fn parseFile(self: *Self, path: []const u8) !void {
         }
         if (key_len == 0) continue;
         assert(key_len <= key_size);
-        const key = try self.arena.dupe(u8, key_buf[0..key_len]);
+        const key = try arena_alloc.dupe(u8, key_buf[0..key_len]);
         if (self.map.get(key)) |node| {
             node.data.reruns += 1;
             self.list.remove(node);
             self.list.append(node);
         } else {
-            const cmd_trimmed = try self.arena.dupe(u8, std.mem.trim(u8, cmd, " "));
-            const new_node = try self.arena.create(List.Node);
+            const cmd_trimmed = try arena_alloc.dupe(u8, std.mem.trim(u8, cmd, " "));
+            const new_node = try arena_alloc.create(List.Node);
             new_node.data = Command{ .cmd = cmd_trimmed };
             try self.map.putNoClobber(key, new_node);
             self.list.append(new_node);

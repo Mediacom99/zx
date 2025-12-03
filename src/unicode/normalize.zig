@@ -477,10 +477,10 @@ const normalization_table = blk: {
     break :blk table;
 };
 
-/// Normalizes codepoint based on custom lookup table
-/// of the 400 most common unicode latin codepoints.
-/// Returns normalized codepoint if there is a normalization
-/// otherwise returns the original codepoint.
+/// Performs ascii folding and (é→e) to normalizes codepoint based on custom lookup table of 400
+/// most common unicode latin codepoints.
+/// Returns normalized codepoint if there is a normalization, otherwise returns the original
+/// codepoint.
 pub inline fn normalizeCodepoint(cp: u21) u21 {
     if (cp < 0 or cp < MIN_CODEPOINT or cp > MAX_CODEPOINT) return cp;
     const normalized_codepoint = normalization_table[cp - MIN_CODEPOINT];

@@ -1,66 +1,48 @@
-# zx (Zig Terminal Toolkit)
-Lightning-fast, cross-platform terminal tools written in Zig. One toolkit, endless possibilities.
+# zx
 
-## What is zx ?
-zx reimagines essential terminal utilities through the lens of modern performance. 
+A terminal shell-history picker written in Zig. It's a personal, early-stage project.
 
-Starting with a blazing-fast shell history search, zx is evolving into a comprehensive toolkit that 
-brings the speed of native code to everyday terminal tasks.
-
-Why another terminal tool? Because we believe developers shouldn't have to choose 
-between speed and features.
-
-Written in Zig, zx delivers both—with sub-millisecond response times and a thoughtful 
-interface that respects your workflow.
+zx reads your bash or zsh history file and shows it as a scrollable list with duplicate counts. Pick a command and it prints to stdout. The project is the first step towards a small set of terminal tools.
 
 > [!WARNING]
-> Still very much a work in progress
+> Work in progress. Fuzzy search and fish support aren't built yet.
 
-## Try it 
-Make sure to have Zig 0.14 installed.
+## Try it
+
+You need Zig 0.14.
+
 ```shell
-git clone https://github.com/Mediacom99/zhist.git
-cd zhist && git switch develop
+git clone https://github.com/Mediacom99/zx.git
+cd zx
 zig build run -- <your bash/zsh history file>
 ```
-(q to quit, jk for up/down, enter to select and print to stdout)
 
-## Supported shells
-- [ ] bash/zsh
-    - [x] history is read from history file and selected command is appended to buffer
-    - [ ] add generation of bash/zsh scripts
-- [ ] fish
+| Key | Action |
+|---|---|
+| `j` / `k` | Move down / up |
+| `Enter` | Select and print to stdout |
+| `q` | Quit |
 
-## Simple features and next steps
-- [ ] add utf8 sanitization (invalid codepoints, invisible char, normalization for fuzzy search):
-    - [ ] parse UTF-16 into WTF-8, use them internally, parse back to UTF-16
-    - [ ] normalization (match 'e' against 'é') and case folding
-    - [ ] check for grapheme clusters (like emojis)
-- [ ] add help menu with keybinds
-- [ ] implement [fzf](https://github.com/junegunn/fzf) fuzzy search algorithms
-- [x] display file entries in scrollable list with duplicate count
-- [x] history navigation with j/k
-- [x] execute selected command automatically on zsh
-- [x] run zhist with keybind on zsh for even faster flow (it's all about that)
-- [ ] modify command and single argument before running
-- [ ] searching/filtering
-- [ ] add some configuration options
-- [ ] better logging
-- [ ] copy command to clipboard
-- [ ] tokenize each command to differentiate between root and arguments
-- [ ] select multiple commands and chain them or pipe stuff between them
-- [ ] add blacklist feature (those commands will be ignored if found in histfile)
+## Status
 
-## Advanced features
+**Works today**
+- Reads bash/zsh history files
+- Scrollable list with duplicate counts
+- j/k navigation
+- Runs from a zsh keybind and executes the selected command
 
-- [ ] use indices of command in original text instead of copying command to reduce memory footprint
-- [ ] Use simd instruction when parsing file
-- [ ] parallel file's chunks parsing (threads)
-- [ ] create, save, list and use custom scripts
-- [ ] store history on db (local and cloud (?))
-- [ ] sync between devices
-- [ ] LLM Integration
+**Next**
+- Search and fuzzy matching, based on [fzf](https://github.com/junegunn/fzf)'s algorithms
+- UTF-8 sanitization, normalization and case folding
+- Help menu with keybinds
+- Shell integration scripts, and fish support
+- Editing a command before running it
 
-# Useful links
-- (Semantic versioning)[https://semver.org/]
+**Ideas**
+- Use indices into the original text to reduce memory use
+- SIMD and multithreaded file parsing
+- Blacklist for commands to ignore
+
+## Links
+
 - [Finite state machine for string representation](https://burntsushi.net/transducers/#fsa-construction)
